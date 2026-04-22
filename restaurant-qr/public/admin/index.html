@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quản Trị - Nhà Hàng QR</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --white: #ffffff;
+    --surface: #ffffff;
+    --border: #e1e4e8;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-light: #eef2ff;
+    --green: #10b981;
+    --green-light: #d1fae5;
+    --orange: #f59e0b;
+    --orange-light: #fef3c7;
+    --red: #ef4444;
+    --red-light: #fee2e2;
+    --blue: #3b82f6;
+    --blue-light: #dbeafe;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--text); color: white;
+    display: flex; flex-direction: column; padding: 0; flex-shrink: 0;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px; font-size: 18px; font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sidebar-logo span { color: var(--orange); }
+  .sidebar-nav { padding: 12px 0; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.65);
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: white; }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--orange); }
+  .nav-icon { font-size: 18px; }
+
+  .main { margin-left: 220px; flex: 1; min-height: 100vh; }
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar h1 { font-size: 20px; font-weight: 700; }
+  .conn-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--green-light); color: var(--green);
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .conn-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  .page { display: none; padding: 24px 28px; }
+  .page.active { display: block; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .stat-card-icon { font-size: 28px; margin-bottom: 8px; }
+  .stat-card-num { font-size: 28px; font-weight: 800; margin-bottom: 2px; }
+  .stat-card-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  /* Tables grid */
+  .tables-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .table-card {
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 14px; padding: 16px; cursor: pointer;
+    transition: all 0.2s; text-align: center;
+  }
+  .table-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .table-card.occupied { border-color: var(--orange); background: var(--orange-light); }
+  .table-card.available { border-color: var(--green); }
+  .table-icon { font-size: 36px; margin-bottom: 8px; }
+  .table-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .table-status {
+    font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px;
+    display: inline-block; margin-bottom: 10px;
+  }
+  .table-card.occupied .table-status { background: var(--orange); color: white; }
+  .table-card.available .table-status { background: var(--green-light); color: var(--green); }
+  .qr-btn {
+    width: 100%; padding: 7px; border-radius: 8px; border: none;
+    background: var(--accent); color: white; font-family: inherit;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  /* QR Modal */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: white; border-radius: 20px; padding: 30px;
+    max-width: 380px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .modal p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .qr-img { width: 200px; height: 200px; margin: 0 auto 16px; border: 3px solid var(--accent); border-radius: 12px; }
+  .qr-url {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-size: 12px; color: var(--muted);
+    word-break: break-all; margin-bottom: 16px; text-align: left;
+  }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-btn {
+    flex: 1; padding: 10px; border-radius: 10px; border: none;
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+  /* Orders table */
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .section-title { font-size: 16px; font-weight: 700; }
+  .filter-tabs { display: flex; gap: 6px; }
+  .filter-tab {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-family: inherit; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--muted);
+  }
+  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .orders-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .orders-table table { width: 100%; border-collapse: collapse; }
+  .orders-table th {
+    background: var(--bg); padding: 12px 16px;
+    font-size: 12px; font-weight: 700; text-align: left;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .orders-table td {
+    padding: 12px 16px; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .orders-table tr:last-child td { border-bottom: none; }
+  .orders-table tr:hover td { background: var(--bg); }
+  .status-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  }
+  .status-pending { background: var(--orange-light); color: var(--orange); }
+  .status-preparing { background: var(--blue-light); color: var(--blue); }
+  .status-ready { background: var(--green-light); color: var(--green); }
+  .status-paid { background: #f3f4f6; color: #6b7280; }
+  .checkout-btn {
+    padding: 5px 12px; border-radius: 8px; border: none;
+    background: var(--green-light); color: var(--green);
+    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .checkout-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* Menu management */
+  .menu-grid-admin { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .menu-card-admin {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .mca-top { display: flex; gap: 12px; align-items: center; }
+  .mca-emoji { font-size: 36px; }
+  .mca-info { flex: 1; }
+  .mca-name { font-size: 14px; font-weight: 700; }
+  .mca-cat { font-size: 12px; color: var(--muted); }
+  .mca-price { font-size: 16px; font-weight: 800; color: var(--accent); }
+  .mca-actions { display: flex; gap: 8px; }
+  .toggle-btn {
+    flex: 1; padding: 6px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn.on { background: var(--green-light); color: var(--green); border-color: var(--green); }
+  .toggle-btn.off { background: var(--red-light); color: var(--red); border-color: var(--red); }
+  .del-btn {
+    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--red); font-family: inherit;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Add menu form */
+  .add-form {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+  }
+  .add-form h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 80px auto; gap: 10px; align-items: end; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .form-input {
+    padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 14px; color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .add-btn {
+    padding: 9px 16px; background: var(--accent); color: white;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+
+  /* Revenue */
+  .revenue-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .rev-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .rev-label { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+  .rev-amount { font-size: 26px; font-weight: 800; color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo"> Nhà Hàng <span>QR</span></div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('tables')"><span class="nav-icon">🪑</span> Bàn & QR Code</div>
+      <div class="nav-item" onclick="showPage('orders')"><span class="nav-icon">📋</span> Đơn hàng</div>
+      <div class="nav-item" onclick="showPage('menu')"><span class="nav-icon">🍽️</span> Quản lý menu</div>
+      <div class="nav-item" onclick="showPage('revenue')"><span class="nav-icon">💰</span> Doanh thu</div>
+    </nav>
+    <div style="padding:16px 20px;font-size:12px;color:rgba(255,255,255,0.4);border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="/kitchen" target="_blank" style="color:rgba(255,255,255,0.5);text-decoration:none;font-weight:600;">👨‍🍳 Mở màn hình bếp →</a>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <div class="conn-pill"><div class="dot"></div><span>Đang kết nối...</span></div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-card-icon">📋</div><div class="stat-card-num" id="dashTotal">0</div><div class="stat-card-label">Tổng đơn hôm nay</div></div>
+        <div class="stat-card"><div class="stat-card-icon">⏳</div><div class="stat-card-num" id="dashPending">0</div><div class="stat-card-label">Đang xử lý</div></div>
+        <div class="stat-card"><div class="stat-card-icon">🪑</div><div class="stat-card-num" id="dashOccupied">0</div><div class="stat-card-label">Bàn đang dùng</div></div>
+        <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-card-num" id="dashRevenue">0đ</div><div class="stat-card-label">Doanh thu hôm nay</div></div>
+      </div>
+
+      <div class="orders-table">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;">📋 Đơn hàng gần đây</div>
+        <table>
+          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Số món</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+          <tbody id="dashOrdersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tables & QR -->
+    <div class="page" id="page-tables">
+      <div class="tables-grid" id="tablesGrid"></div>
+    </div>
+
+    <!-- Orders -->
+    <div class="page" id="page-orders">
+      <div class="section-header">
+        <div class="section-title">Tất cả đơn hàng</div>
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="filterOrders('all',this)">Tất cả</button>
+          <button class="filter-tab" onclick="filterOrders('pending',this)">⏳ Chờ</button>
+          <button class="filter-tab" onclick="filterOrders('preparing',this)">🔥 Đang nấu</button>
+          <button class="filter-tab" onclick="filterOrders('ready',this)">✅ Xong</button>
+          <button class="filter-tab" onclick="filterOrders('paid',this)">💰 Đã thanh toán</button>
+        </div>
+      </div>
+      <div class="orders-table">
+        <table>
+          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Các món</th><th>Ghi chú</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Menu -->
+    <div class="page" id="page-menu">
+      <div class="add-form">
+        <h3>➕ Thêm món mới</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Tên món</label><input class="form-input" id="newName" placeholder="VD: Phở Bò"/></div>
+          <div class="form-group"><label>Giá (đ)</label><input class="form-input" id="newPrice" type="number" placeholder="65000"/></div>
+          <div class="form-group"><label>Danh mục</label>
+            <select class="form-input" id="newCat">
+              <option>Khai vị</option><option>Món chính</option><option>Đồ uống</option><option>Tráng miệng</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Icon</label><input class="form-input" id="newImage" placeholder="🍜" maxlength="2"/></div>
+          <button class="add-btn" onclick="addMenuItem()">Thêm</button>
+        </div>
+      </div>
+      <div class="menu-grid-admin" id="menuGridAdmin"></div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="page" id="page-revenue">
+      <div class="revenue-cards">
+        <div class="rev-card"><div class="rev-label">💰 Doanh thu hôm nay</div><div class="rev-amount" id="revToday">0đ</div></div>
+        <div class="rev-card"><div class="rev-label">📋 Đơn đã thanh toán</div><div class="rev-amount" id="revCount">0</div></div>
+        <div class="rev-card"><div class="rev-label">🍽️ Trung bình/đơn</div><div class="rev-amount" id="revAvg">0đ</div></div>
+      </div>
+      <div class="orders-table">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;">💰 Lịch sử thanh toán</div>
+        <table>
+          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Các món</th><th>Tổng tiền</th><th>Thời gian thanh toán</th></tr></thead>
+          <tbody id="revenueBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-bg" id="qrModal">
+  <div class="modal">
+    <h2 id="modalTitle">QR Code</h2>
+    <p id="modalDesc">Khách quét mã để đặt món</p>
+    <img class="qr-img" id="qrImg" src="" alt="QR"/>
+    <div class="qr-url" id="qrUrl"></div>
+    <div class="modal-actions">
+      <button class="modal-btn btn-primary" onclick="downloadQR()">⬇️ Tải QR</button>
+      <button class="modal-btn btn-secondary" onclick="closeModal()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let tables = {};
+let orders = {};
+let menu = [];
+let currentQRTable = null;
+let orderFilter = 'all';
+
+socket.emit('join_admin');
+
+socket.on('connect', () => {
+  document.querySelector('.conn-pill span').textContent = 'Đã kết nối';
+});
+
+// Load initial data
+Promise.all([
+  fetch('/api/tables').then(r => r.json()),
+  fetch('/api/orders').then(r => r.json()),
+  fetch('/api/menu').then(r => r.json()),
+]).then(([tablesData, ordersData, menuData]) => {
+  tablesData.forEach(t => tables[t.tableId] = t);
+  ordersData.forEach(o => orders[o.orderId] = o);
+  menu = menuData;
+  renderAll();
+});
+
+socket.on('new_order', (order) => { orders[order.orderId] = order; renderAll(); });
+socket.on('order_updated', (order) => { orders[order.orderId] = order; renderAll(); });
+socket.on('table_updated', (table) => { tables[table.tableId] = table; renderTables(); });
+socket.on('menu_updated', (newMenu) => { menu = newMenu; renderMenuAdmin(); });
+
+function renderAll() { renderDashboard(); renderTables(); renderOrders(); renderMenuAdmin(); renderRevenue(); }
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  const titles = {dashboard:'Dashboard', tables:'Bàn & QR Code', orders:'Đơn hàng', menu:'Quản lý menu', revenue:'Doanh thu'};
+  document.getElementById('pageTitle').textContent = titles[name];
+}
+
+function statusBadge(status) {
+  const map = { pending:'⏳ Chờ xử lý', preparing:'🔥 Đang nấu', ready:'✅ Sẵn sàng', paid:'💰 Đã thanh toán' };
+  const cls = { pending:'status-pending', preparing:'status-preparing', ready:'status-ready', paid:'status-paid' };
+  return `<span class="status-badge ${cls[status]}">${map[status]||status}</span>`;
+}
+
+function renderDashboard() {
+  const all = Object.values(orders);
+  const today = all.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
+  const active = all.filter(o => ['pending','preparing','ready'].includes(o.status));
+  const paidToday = today.filter(o => o.status === 'paid');
+  const revenue = paidToday.reduce((s, o) => s + o.total, 0);
+  const occupied = Object.values(tables).filter(t => t.status === 'occupied').length;
+
+  document.getElementById('dashTotal').textContent = today.length;
+  document.getElementById('dashPending').textContent = active.length;
+  document.getElementById('dashOccupied').textContent = occupied;
+  document.getElementById('dashRevenue').textContent = revenue.toLocaleString('vi') + 'đ';
+
+  const recent = all.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10);
+  document.getElementById('dashOrdersBody').innerHTML = recent.map(o => `
+    <tr>
+      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
+      <td>${o.tableName}</td>
+      <td>${o.items.length} món</td>
+      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
+      <td>${statusBadge(o.status)}</td>
+      <td style="color:var(--muted)">${new Date(o.createdAt).toLocaleTimeString('vi',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 Thanh toán</button>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderTables() {
+  document.getElementById('tablesGrid').innerHTML = Object.values(tables).map(t => `
+    <div class="table-card ${t.status}" onclick="showQR('${t.tableId}','${t.tableName}')">
+      <div class="table-icon">${t.status === 'occupied' ? '🍽️' : '🪑'}</div>
+      <div class="table-name">${t.tableName}</div>
+      <div class="table-status">${t.status === 'occupied' ? '● Đang dùng' : '○ Trống'}</div>
+      <button class="qr-btn" onclick="event.stopPropagation();showQR('${t.tableId}','${t.tableName}')">📱 Xem QR Code</button>
+    </div>
+  `).join('');
+}
+
+function renderOrders() {
+  const all = Object.values(orders).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const filtered = orderFilter === 'all' ? all : all.filter(o => o.status === orderFilter);
+  document.getElementById('ordersBody').innerHTML = filtered.map(o => `
+    <tr>
+      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
+      <td>${o.tableName}</td>
+      <td style="font-size:12px;max-width:200px;">${o.items.map(i=>`${i.image}${i.name}×${i.quantity}`).join(', ')}</td>
+      <td style="font-size:12px;color:var(--muted)">${o.note || '—'}</td>
+      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
+      <td>${statusBadge(o.status)}</td>
+      <td style="color:var(--muted);font-size:12px;">${new Date(o.createdAt).toLocaleString('vi')}</td>
+      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 Thanh toán</button>` : '<span style="color:var(--muted);font-size:12px;">Đã TT</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterOrders(filter, btn) {
+  orderFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+function renderMenuAdmin() {
+  document.getElementById('menuGridAdmin').innerHTML = menu.map(item => `
+    <div class="menu-card-admin">
+      <div class="mca-top">
+        <div class="mca-emoji">${item.image}</div>
+        <div class="mca-info">
+          <div class="mca-name">${item.name}</div>
+          <div class="mca-cat">${item.category}</div>
+          <div class="mca-price">${item.price.toLocaleString('vi')}đ</div>
+        </div>
+      </div>
+      <div class="mca-actions">
+        <button class="toggle-btn ${item.available ? 'on' : 'off'}" onclick="toggleItem(${item.id})">
+          ${item.available ? '✅ Đang bán' : '❌ Hết hàng'}
+        </button>
+        <button class="del-btn" onclick="deleteItem(${item.id})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderRevenue() {
+  const paid = Object.values(orders).filter(o => o.status === 'paid');
+  const today = paid.filter(o => new Date(o.paidAt||o.createdAt).toDateString() === new Date().toDateString());
+  const total = today.reduce((s, o) => s + o.total, 0);
+  const avg = today.length ? Math.round(total / today.length) : 0;
+  document.getElementById('revToday').textContent = total.toLocaleString('vi') + 'đ';
+  document.getElementById('revCount').textContent = today.length;
+  document.getElementById('revAvg').textContent = avg.toLocaleString('vi') + 'đ';
+  document.getElementById('revenueBody').innerHTML = paid.sort((a,b)=>new Date(b.paidAt||b.createdAt)-new Date(a.paidAt||a.createdAt)).map(o=>`
+    <tr>
+      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
+      <td>${o.tableName}</td>
+      <td style="font-size:12px;">${o.items.map(i=>`${i.image}${i.name}×${i.quantity}`).join(', ')}</td>
+      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
+      <td style="color:var(--muted);font-size:12px;">${new Date(o.paidAt||o.createdAt).toLocaleString('vi')}</td>
+    </tr>
+  `).join('');
+}
+
+function showQR(tableId, tableName) {
+  currentQRTable = tableId;
+  document.getElementById('modalTitle').textContent = `QR - ${tableName}`;
+  fetch(`/api/qr/${tableId}`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('qrImg').src = data.qr;
+      document.getElementById('qrUrl').textContent = data.url;
+      document.getElementById('qrModal').classList.add('show');
+    });
+}
+
+function closeModal() { document.getElementById('qrModal').classList.remove('show'); }
+
+function downloadQR() {
+  const link = document.createElement('a');
+  link.href = document.getElementById('qrImg').src;
+  link.download = `QR-${currentQRTable}.png`;
+  link.click();
+}
+
+function checkout(orderId) {
+  if (!confirm('Xác nhận thanh toán đơn #' + orderId + '?')) return;
+  fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
+    .then(r => r.json())
+    .then(() => { renderAll(); });
+}
+
+function addMenuItem() {
+  const name = document.getElementById('newName').value.trim();
+  const price = document.getElementById('newPrice').value;
+  const category = document.getElementById('newCat').value;
+  const image = document.getElementById('newImage').value || '🍽️';
+  if (!name || !price) return alert('Vui lòng nhập tên và giá!');
+  fetch('/api/menu', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, price, category, image })
+  }).then(() => {
+    document.getElementById('newName').value = '';
+    document.getElementById('newPrice').value = '';
+    document.getElementById('newImage').value = '';
+  });
+}
+
+function toggleItem(id) {
+  const item = menu.find(m => m.id === id);
+  fetch(`/api/menu/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ available: !item.available })
+  });
+}
+
+function deleteItem(id) {
+  if (!confirm('Xóa món này?')) return;
+  fetch(`/api/menu/${id}`, { method: 'DELETE' });
+}
+</script>
+</body>
+</html>
