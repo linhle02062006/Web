@@ -19,13 +19,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ===================== DỮ LIỆU MENU BÁNH MÌ =====================
 let menu = [
-  { id: 1, name: 'Bánh Mì Chả Cá + Tặng Trà Tắc', price: 17000, category: 'Món chính',Image: '/menu/banhmichaca.jpg', available: true },
-  { id: 2, name: 'Bánh Mì Chả Cá Trứng + Tặng Trà Tắc', price: 22000, category: 'Món chính',Image: '/menu/banhmichatrung.jpg', available: true },
-  { id: 3, name: 'Bánh Mì Chả Cá Chả Lụa + Tặng Trà Tắc', price: 22000, category: 'Món chính',Image: '/menu/banhmicalua.jpg', available: true },
-  { id: 4, name: 'Bánh Mì Chả Cá Đặc Biệt + Tặng Trà Tắc', price: 27000, category: 'Món chính',Image: '/menu/banhmidacbiet.jpg', available: true },
-  { id: 5, name: 'Trứng Thêm', price: 5000, category: 'Thêm',Image: '/menu/trung.png', available: true },
-  { id: 6, name: 'Chả Cá Thêm', price: 5000, category: 'Thêm',Image: '/menu/chaca.jpg', available: true },
-  { id: 7, name: 'Chả Lụa Thêm', price: 5000, category: 'Thêm',Image: '/menu/images.jpg', available: true },
+  { id: 1, name: 'Bánh Mì Chả Cá + Tặng Trà Tắc', price: 17000, category: 'Món chính',image: '/menu/banhmichaca.jpg', available: true },
+  { id: 2, name: 'Bánh Mì Chả Cá Trứng + Tặng Trà Tắc', price: 22000, category: 'Món chính',image: '/menu/banhmichatrung.jpg', available: true },
+  { id: 3, name: 'Bánh Mì Chả Cá Chả Lụa + Tặng Trà Tắc', price: 22000, category: 'Món chính',image: '/menu/banhmicalua.jpg', available: true },
+  { id: 4, name: 'Bánh Mì Chả Cá Đặc Biệt + Tặng Trà Tắc', price: 27000, category: 'Món chính',image: '/menu/banhmidacbiet.jpg', available: true },
+  { id: 5, name: 'Trứng Thêm', price: 5000, category: 'Thêm',image: '/menu/trung.png', available: true },
+  { id: 6, name: 'Chả Cá Thêm', price: 5000, category: 'Thêm',image: '/menu/chaca.jpg', available: true },
+  { id: 7, name: 'Chả Lụa Thêm', price: 5000, category: 'Thêm',image: '/menu/images.jpg', available: true },
 ];
 
 let orders = {}; 
