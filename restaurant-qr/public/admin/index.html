@@ -170,13 +170,29 @@
   .checkout-btn:disabled { opacity: 0.4; pointer-events: none; }
 
   /* Menu management */
-  .menu-grid-admin { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .menu-grid-admin {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  }
   .menu-card-admin {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
   }
   .mca-top { display: flex; gap: 12px; align-items: center; }
-  .mca-emoji { font-size: 36px; }
+  .mca-emoji {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  }
+.mca-emoji img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  }
   .mca-info { flex: 1; }
   .mca-name { font-size: 14px; font-weight: 700; }
   .mca-cat { font-size: 12px; color: var(--muted); }
