@@ -381,8 +381,20 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-  const titles = {dashboard:'Dashboard', tables:'Bàn & QR Code', orders:'Đơn hàng', menu:'Quản lý menu', revenue:'Doanh thu'};
+  
+  if (event && event.currentTarget) {
+    event.currentTarget.classList.add('active');
+  }
+
+  // Chỉnh lại tên tiêu đề cho phù hợp bán mang đi
+  const titles = {
+    dashboard: 'Tổng quan cửa hàng', 
+    tables: 'Mã QR Mang Đi', // Thay vì "Bàn & QR Code"
+    orders: 'Đơn hàng mới', 
+    menu: 'Thực đơn bánh mì', 
+    revenue: 'Doanh thu bán hàng'
+  };
+  
   document.getElementById('pageTitle').textContent = titles[name];
 }
 

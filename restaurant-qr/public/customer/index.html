@@ -237,7 +237,7 @@
 <div class="header">
   <div class="header-top">
     <div class="restaurant-name">Bánh mì chả cá</div>
-    <div class="table-badge" id="tableBadge">Bàn --</div>
+    <div class="table-badge" id="tableBadge">Mang đi</div>
   </div>
 </div>
 
@@ -327,7 +327,11 @@ let currentOrderId = null;
 
 // Kết nối socket
 socket.emit('join_table', { tableId });
-document.getElementById('tableBadge').textContent = 'Bàn ' + tableId.replace('table_', '');
+if (tableId === 'takeaway') {
+    document.getElementById('tableBadge').textContent = 'Khách Mang Đi';
+} else {
+    document.getElementById('tableBadge').textContent = 'Bàn ' + tableId.replace('table_', '');
+}
 
 // Nhận xác nhận order
 socket.on('order_confirmed', (order) => {
