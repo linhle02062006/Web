@@ -319,7 +319,7 @@
 <script>
 const params = new URLSearchParams(location.search);
 const tableId = params.get('table') || 'table_1';
-const socket = io();
+const socket = io('https://banh-mi-cha-ca-nong.onrender.com');
 
 let menu = [];
 let cart = []; // [{id, name, price, quantity, image}]

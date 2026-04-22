@@ -7,7 +7,12 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", 
+    methods: ["GET", "POST"]
+  }
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -83,7 +88,7 @@ app.get('/api/tables', (req, res) => {
 app.get('/api/qr/:tableId', async (req, res) => {
   const { tableId } = req.params;
   const host = req.headers.host;
-  const url = `http://${host}/customer?table=${tableId}`;
+ const url = `https://banh-mi-cha-ca-nong.onrender.com/customer?table=${tableId}`;
   try {
     const qrDataUrl = await QRCode.toDataURL(url, {
       width: 400,
