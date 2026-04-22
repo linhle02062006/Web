@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*", 
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT"]
   }
 });
 
@@ -84,6 +84,7 @@ io.on('connection', (socket) => {
   console.log('Có người truy cập:', socket.id);
 
   socket.on('join_admin', () => socket.join('admin_room'));
+  socket.on('join_kitchen', () => socket.join('kitchen_room'));
 
   socket.on('place_order', (data) => {
     const orderId = uuidv4().slice(0, 6).toUpperCase();
@@ -99,9 +100,9 @@ io.on('connection', (socket) => {
       total: data.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     };
     orders[orderId] = order;
-    
     socket.emit('order_confirmed', order);
     io.to('admin_room').emit('new_order', order);
+    io.to('kitchen_room').emit('new_order', order);
     console.log(`Đơn mang đi mới: ${orderId}`);
   });
 });
@@ -110,3 +111,27 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(` Server Bánh Mì Chả Cá đang chạy cổng ${PORT}`);
 });
+
+// Cập nhật trạng thái toàn bộ đơn (bếp bấm "Bắt đầu nấu" / "Hoàn thành")
+app.put('/api/orders/:orderId/status', (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+  if (!orders[orderId]) return res.status(404).json({ error: 'Không tìm thấy' });
+  orders[orderId].status = status;
+  io.emit('order_updated', orders[orderId]);
+  res.json({ success: true });
+});
+
+// Cập nhật trạng thái từng món (bếp bấm toggle từng item)
+app.put('/api/orders/:orderId/items/:idx', (req, res) => {
+  const { orderId, idx } = req.params;
+  const { status } = req.body;
+  const order = orders[orderId];
+  if (!order) return res.status(404).json({ error: 'Không tìm thấy' });
+  order.items[parseInt(idx)].status = status;
+  io.emit('order_updated', order);
+  res.json({ success: true });
+});
+
+// Route cho màn hình bếp
+app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'public/kitchen/index.html')));
