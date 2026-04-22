@@ -470,7 +470,9 @@ function renderMenuAdmin() {
   document.getElementById('menuGridAdmin').innerHTML = menu.map(item => `
     <div class="menu-card-admin">
       <div class="mca-top">
-        <div class="mca-emoji">${item.image}</div>
+        <div class="mca-emoji">
+          <img src="${item.image}" alt="${item.name}">
+        </div>
         <div class="mca-info">
           <div class="mca-name">${item.name}</div>
           <div class="mca-cat">${item.category}</div>

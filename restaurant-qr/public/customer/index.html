@@ -230,6 +230,12 @@
   .step.active .step-label, .step.done .step-label { color: var(--text); }
 
   .pb-cart { padding-bottom: 80px; }
+  .ci-emoji img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
 </style>
 </head>
 <body>
@@ -327,11 +333,7 @@ let currentOrderId = null;
 
 // Kết nối socket
 socket.emit('join_table', { tableId });
-if (tableId === 'takeaway') {
-    document.getElementById('tableBadge').textContent = 'Khách Mang Đi';
-} else {
-    document.getElementById('tableBadge').textContent = 'Bàn ' + tableId.replace('table_', '');
-}
+document.getElementById('tableBadge').textContent = 'Bàn ' + tableId.replace('table_', '');
 
 // Nhận xác nhận order
 socket.on('order_confirmed', (order) => {
@@ -414,7 +416,7 @@ function renderMenu() {
       items.map(item => {
         const inCart = cart.find(c => c.id === item.id);
         return `<div class="menu-item ${item.available ? '' : 'unavailable'}" onclick="addToCart(${item.id})">
-          <div class="item-emoji">${item.image}</div>
+          <div class="item-emoji"><img src="${item.image}"></div>
           ${inCart ? `<div class="in-cart-badge">${inCart.quantity}</div>` : ''}
           <div class="item-info">
             <div class="item-name">${item.name}</div>
@@ -458,7 +460,8 @@ function renderCartItems() {
   if (!cart.length) { container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Chưa có món nào</p>'; return; }
   container.innerHTML = cart.map((item, idx) => `
     <div class="cart-item">
-      <div class="ci-emoji">${item.image}</div>
+      <div class="ci-emoji">
+      <img src="${item.image}" alt="${item.name}"></div>
       <div class="ci-info">
         <div class="ci-name">${item.name}</div>
         <div class="ci-price">${item.price.toLocaleString('vi')}đ / món</div>
