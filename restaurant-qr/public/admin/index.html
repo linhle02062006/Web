@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Quản Trị - Nhà Hàng QR</title>
 <script src="/socket.io/socket.io.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -24,43 +24,51 @@
     --red-light: #fee2e2;
     --blue: #3b82f6;
     --blue-light: #dbeafe;
+    --sidebar-w: 220px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  html, body { -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-  /* Layout */
   .layout { display: flex; min-height: 100vh; }
   .sidebar {
-    width: 220px; background: var(--text); color: white;
-    display: flex; flex-direction: column; padding: 0; flex-shrink: 0;
-    position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    width: var(--sidebar-w); background: var(--text); color: white;
+    display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 100;
+    transition: transform 0.25s ease;
   }
   .sidebar-logo {
     padding: 24px 20px 20px; font-size: 18px; font-weight: 700;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; justify-content: space-between; align-items: center;
   }
   .sidebar-logo span { color: var(--orange); }
-  .sidebar-nav { padding: 12px 0; flex: 1; }
+  .sidebar-close { display: none; background: transparent; color: white; border: none; font-size: 22px; cursor: pointer; }
+  .sidebar-nav { padding: 12px 0; flex: 1; overflow-y: auto; }
   .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 20px; font-size: 14px; font-weight: 500;
-    cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.65);
-    border-left: 3px solid transparent;
+    display: flex; align-items: center; gap: 10px; padding: 11px 20px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.65); border-left: 3px solid transparent;
   }
   .nav-item:hover { background: rgba(255,255,255,0.07); color: white; }
   .nav-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--orange); }
-  .nav-icon { font-size: 18px; }
 
-  .main { margin-left: 220px; flex: 1; min-height: 100vh; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
+  .sidebar-overlay.show { display: block; }
+
+  .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; min-width: 0; }
   .topbar {
     background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 0; z-index: 50;
+    position: sticky; top: 0; z-index: 50; gap: 12px;
   }
-  .topbar h1 { font-size: 20px; font-weight: 700; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .topbar h1 { font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .mobile-menu-btn {
+    display: none; background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 6px 12px; font-size: 20px; cursor: pointer; line-height: 1;
+  }
   .conn-pill {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--green-light); color: var(--green);
+    display: flex; align-items: center; gap: 6px; background: var(--green-light); color: var(--green);
     padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
   }
   .conn-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
@@ -68,22 +76,68 @@
   .page { display: none; padding: 24px 28px; }
   .page.active { display: block; }
 
-  /* Stats */
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 18px 20px;
-  }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
   .stat-card-icon { font-size: 28px; margin-bottom: 8px; }
-  .stat-card-num { font-size: 28px; font-weight: 800; margin-bottom: 2px; }
-  .stat-card-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .stat-card-num { font-size: 28px; font-weight: 800; }
+  .stat-card-label { font-size: 13px; color: var(--muted); }
 
-  /* Tables grid */
-  .tables-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .tables-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+  /* Takeaway QR card (single) */
+  .takeaway-qr-card {
+    background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+    border: 2px solid var(--orange);
+    border-radius: 18px;
+    padding: 28px 24px;
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto;
+    box-shadow: 0 6px 24px rgba(245,158,11,0.18);
+  }
+  .tqc-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .tqc-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .qr-btn-big {
+    background: var(--accent); color: white; border: none;
+    padding: 14px 28px; border-radius: 12px;
+    font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .qr-btn-big:hover { background: #4338ca; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(79,70,229,0.3); }
+
+  /* Badge pending trên nav */
+  .nav-badge {
+    display: none; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 6px;
+    background: var(--red); color: white;
+    border-radius: 11px; font-size: 12px; font-weight: 700;
+    margin-left: auto;
+  }
+
+  /* Toast notification */
+  .toast-container {
+    position: fixed; top: 80px; right: 20px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--text); color: white;
+    padding: 14px 18px; border-radius: 12px;
+    min-width: 260px; max-width: 340px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    font-size: 14px; font-weight: 500;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+    border-left: 4px solid var(--green);
+    pointer-events: auto;
+  }
+  .toast strong { color: var(--accent2, #ffd166); }
+  @keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { to { transform: translateX(120%); opacity: 0; } }
+
+  .tables-grid-old { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
   .table-card {
-    background: var(--surface); border: 2px solid var(--border);
-    border-radius: 14px; padding: 16px; cursor: pointer;
-    transition: all 0.2s; text-align: center;
+    background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 16px;
+    cursor: pointer; transition: all 0.2s; text-align: center;
   }
   .table-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
   .table-card.occupied { border-color: var(--orange); background: var(--orange-light); }
@@ -97,28 +151,175 @@
   .table-card.occupied .table-status { background: var(--orange); color: white; }
   .table-card.available .table-status { background: var(--green-light); color: var(--green); }
   .qr-btn {
-    width: 100%; padding: 7px; border-radius: 8px; border: none;
+    width: 100%; padding: 8px; border-radius: 8px; border: none;
     background: var(--accent); color: white; font-family: inherit;
     font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-scroll table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .table-scroll th {
+    background: var(--bg); padding: 12px 16px;
+    font-size: 12px; font-weight: 700; text-align: left;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 2;
+    white-space: nowrap;
+  }
+  .table-scroll td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .table-scroll tr:last-child td { border-bottom: none; }
+  .table-scroll tr:hover td { background: var(--bg); }
+
+  .status-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+    white-space: nowrap; display: inline-block;
+  }
+  .status-pending { background: var(--orange-light); color: var(--orange); }
+  .status-preparing { background: var(--blue-light); color: var(--blue); }
+  .status-ready { background: var(--green-light); color: var(--green); }
+  .status-paid { background: #f3f4f6; color: #6b7280; }
+  .checkout-btn {
+    padding: 6px 12px; border-radius: 8px; border: none;
+    background: var(--green-light); color: var(--green);
+    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    white-space: nowrap;
+  }
+  .checkout-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* Filter tabs */
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+  }
+  .section-title { font-size: 16px; font-weight: 700; }
+  .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-family: inherit; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--muted);
+    white-space: nowrap;
+  }
+  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* Menu management */
+  .menu-grid-admin {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .menu-card-admin {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .mca-top { display: flex; gap: 12px; align-items: center; }
+  .mca-emoji {
+    width: 72px; height: 72px; border-radius: 10px;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .mca-emoji img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mca-info { flex: 1; min-width: 0; }
+  .mca-name { font-size: 14px; font-weight: 700; word-break: break-word; }
+  .mca-cat { font-size: 12px; color: var(--muted); }
+  .mca-price { font-size: 16px; font-weight: 800; color: var(--accent); }
+  .mca-actions { display: flex; gap: 8px; }
+  .toggle-btn {
+    flex: 1; padding: 7px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn.on { background: var(--green-light); color: var(--green); border-color: var(--green); }
+  .toggle-btn.off { background: var(--red-light); color: var(--red); border-color: var(--red); }
+  .del-btn {
+    padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--red); font-family: inherit;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Add form */
+  .add-form {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+  }
+  .add-form h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .form-input {
+    padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 14px; color: var(--text);
+    outline: none; transition: border-color 0.2s; width: 100%;
+    background: var(--surface);
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .add-btn {
+    padding: 10px 16px; background: var(--accent); color: white;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+
+  /* Revenue */
+  .revenue-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .rev-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .rev-label { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+  .rev-amount { font-size: 24px; font-weight: 800; color: var(--accent); word-break: break-all; }
+
+  /* Date filter bar */
+  .filter-bar {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  }
+  .filter-bar .form-group { min-width: 140px; flex: 1; }
+  .filter-bar .preset-row { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .filter-bar .preset-btn {
+    padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-family: inherit; font-size: 12px;
+    font-weight: 600; cursor: pointer; color: var(--muted); white-space: nowrap;
+  }
+  .filter-bar .preset-btn.active {
+    background: var(--accent-light); border-color: var(--accent); color: var(--accent);
+  }
+  .filter-bar .apply-btn {
+    padding: 9px 16px; background: var(--accent); color: white;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .filter-bar .export-btn {
+    padding: 9px 16px; background: var(--green); color: white;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .filter-bar .hint {
+    font-size: 11px; color: var(--muted); flex-basis: 100%;
   }
 
   /* QR Modal */
   .modal-bg {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     z-index: 1000; align-items: center; justify-content: center;
+    padding: 16px;
   }
   .modal-bg.show { display: flex; }
   .modal {
-    background: white; border-radius: 20px; padding: 30px;
-    max-width: 380px; width: 90%; text-align: center;
+    background: white; border-radius: 20px; padding: 24px;
+    max-width: 380px; width: 100%; text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-height: 92vh; overflow-y: auto;
   }
-  .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-  .modal p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
-  .qr-img { width: 200px; height: 200px; margin: 0 auto 16px; border: 3px solid var(--accent); border-radius: 12px; }
+  .modal h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .modal p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .qr-img {
+    width: 100%; max-width: 240px; aspect-ratio: 1;
+    margin: 0 auto 16px; border: 3px solid var(--accent); border-radius: 12px;
+    display: block;
+  }
   .qr-url {
     background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px; font-size: 12px; color: var(--muted);
+    border-radius: 8px; padding: 10px; font-size: 11px; color: var(--muted);
     word-break: break-all; margin-bottom: 16px; text-align: left;
   }
   .modal-actions { display: flex; gap: 10px; }
@@ -129,185 +330,94 @@
   .btn-primary { background: var(--accent); color: white; }
   .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
 
-  /* Orders table */
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .section-title { font-size: 16px; font-weight: 700; }
-  .filter-tabs { display: flex; gap: 6px; }
-  .filter-tab {
-    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface); font-family: inherit; font-size: 12px;
-    font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--muted);
-  }
-  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
-
-  .orders-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .orders-table table { width: 100%; border-collapse: collapse; }
-  .orders-table th {
-    background: var(--bg); padding: 12px 16px;
-    font-size: 12px; font-weight: 700; text-align: left;
-    color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border);
-  }
-  .orders-table td {
-    padding: 12px 16px; font-size: 13px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-  }
-  .orders-table tr:last-child td { border-bottom: none; }
-  .orders-table tr:hover td { background: var(--bg); }
-  .status-badge {
-    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
-  }
-  .status-pending { background: var(--orange-light); color: var(--orange); }
-  .status-preparing { background: var(--blue-light); color: var(--blue); }
-  .status-ready { background: var(--green-light); color: var(--green); }
-  .status-paid { background: #f3f4f6; color: #6b7280; }
-  .checkout-btn {
-    padding: 5px 12px; border-radius: 8px; border: none;
-    background: var(--green-light); color: var(--green);
-    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-  }
-  .checkout-btn:disabled { opacity: 0.4; pointer-events: none; }
-
-  /* Menu management */
-  .menu-grid-admin {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
-  }
-  .menu-card-admin {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
-  }
-  .mca-top { display: flex; gap: 12px; align-items: center; }
-  .mca-emoji {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  overflow: hidden;
-  flex-shrink: 0;
-  }
-.mca-emoji img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  }
-  .mca-info { flex: 1; }
-  .mca-name { font-size: 14px; font-weight: 700; }
-  .mca-cat { font-size: 12px; color: var(--muted); }
-  .mca-price { font-size: 16px; font-weight: 800; color: var(--accent); }
-  .mca-actions { display: flex; gap: 8px; }
-  .toggle-btn {
-    flex: 1; padding: 6px; border-radius: 8px; border: 1px solid var(--border);
-    font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .toggle-btn.on { background: var(--green-light); color: var(--green); border-color: var(--green); }
-  .toggle-btn.off { background: var(--red-light); color: var(--red); border-color: var(--red); }
-  .del-btn {
-    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: transparent; color: var(--red); font-family: inherit;
-    font-size: 12px; font-weight: 700; cursor: pointer;
+  /* Empty state */
+  .empty {
+    padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px;
   }
 
-  /* Add menu form */
-  .add-form {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 20px; margin-bottom: 20px;
-  }
-  .add-form h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 80px auto; gap: 10px; align-items: end; }
-  .form-group { display: flex; flex-direction: column; gap: 4px; }
-  .form-group label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
-  .form-input {
-    padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
-    font-family: inherit; font-size: 14px; color: var(--text);
-    outline: none; transition: border-color 0.2s;
-  }
-  .form-input:focus { border-color: var(--accent); }
-  .add-btn {
-    padding: 9px 16px; background: var(--accent); color: white;
-    border: none; border-radius: 8px; font-family: inherit;
-    font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  /* ===== Responsive ===== */
+  @media (max-width: 1024px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .form-row .add-btn { grid-column: 1 / -1; }
   }
 
-  /* Revenue */
-  .revenue-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-  .rev-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px;
-  }
-  .rev-label { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
-  .rev-amount { font-size: 26px; font-weight: 800; color: var(--accent); }
-
-  /* Mobile Responsive */
   @media (max-width: 768px) {
+    :root { --sidebar-w: 0px; }
     .sidebar {
-      width: 100%;
-      height: auto;
-      position: relative;
-      display: none;
+      width: 260px;
+      transform: translateX(-100%);
+      box-shadow: 4px 0 20px rgba(0,0,0,0.15);
     }
-    .sidebar.show { display: flex; }
+    .sidebar.show { transform: translateX(0); }
+    .sidebar-close { display: block; }
     .main { margin-left: 0; }
-    .topbar { padding: 12px 16px; }
+
+    .topbar { padding: 12px 14px; }
     .topbar h1 { font-size: 16px; }
-    
-    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .stat-card { padding: 12px; }
-    .stat-card-num { font-size: 20px; }
+    .mobile-menu-btn { display: block; }
+    .conn-pill { padding: 4px 10px; font-size: 11px; }
+    .conn-pill span { display: none; }
+
+    .page { padding: 16px 14px; }
+
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { padding: 14px; }
+    .stat-card-icon { font-size: 22px; margin-bottom: 4px; }
+    .stat-card-num { font-size: 18px; }
     .stat-card-label { font-size: 11px; }
-    
-    .page { padding: 16px; }
+
     .tables-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .table-card { padding: 12px; }
-    .table-icon { font-size: 28px; }
+    .table-icon { font-size: 30px; }
     .table-name { font-size: 14px; }
-    
-    .orders-table { overflow-x: auto; }
-    .orders-table table { min-width: 600px; }
-    .orders-table th, .orders-table td { padding: 8px 10px; font-size: 12px; }
-    
-    .menu-grid-admin { grid-template-columns: 1fr; }
-    .mca-top { flex-direction: column; align-items: flex-start; }
+
+    .table-scroll th, .table-scroll td { padding: 10px 12px; font-size: 12px; }
+
+    .menu-grid-admin { grid-template-columns: 1fr; gap: 10px; }
     .mca-emoji { width: 60px; height: 60px; }
-    
-    .revenue-cards { grid-template-columns: 1fr; }
+
+    .revenue-cards { grid-template-columns: 1fr; gap: 10px; }
+    .rev-amount { font-size: 22px; }
+
     .form-row { grid-template-columns: 1fr; }
-    
-    .mobile-menu-btn {
-      display: block;
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 200;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 18px;
-      cursor: pointer;
-    }
+    .form-row .add-btn { grid-column: 1; width: 100%; }
+
+    .filter-bar { padding: 12px; gap: 10px; }
+    .filter-bar .form-group { min-width: 100%; flex: 1 1 100%; }
+    .filter-bar .apply-btn, .filter-bar .export-btn { flex: 1; }
+
+    .section-header { flex-direction: column; align-items: stretch; }
+    .section-title { font-size: 15px; }
+
+    .modal { padding: 20px; }
+    .modal h2 { font-size: 18px; }
+    .qr-img { max-width: 200px; }
+
+    .hide-sm { display: none !important; }
   }
-  @media (min-width: 769px) {
-    .mobile-menu-btn { display: none; }
+
+  @media (max-width: 380px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .tables-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
-<button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileMenu()"></div>
 <div class="layout">
   <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-logo"> Nhà Hàng <span>QR</span></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>🍽️ Nhà Hàng <b style="color:var(--orange)">QR</b></span>
+      <button class="sidebar-close" onclick="closeMobileMenu()" aria-label="Đóng">✕</button>
+    </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
-      <div class="nav-item" onclick="showPage('tables')"><span class="nav-icon">🪑</span> Bàn & QR Code</div>
-      <div class="nav-item" onclick="showPage('orders')"><span class="nav-icon">📋</span> Đơn hàng</div>
-      <div class="nav-item" onclick="showPage('menu')"><span class="nav-icon">🍽️</span> Quản lý menu</div>
-      <div class="nav-item" onclick="showPage('revenue')"><span class="nav-icon">💰</span> Doanh thu</div>
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)"><span>📊</span> Dashboard</div>
+      <div class="nav-item" data-page="tables" onclick="showPage('tables', this)"><span>📱</span> QR bán hàng</div>
+      <div class="nav-item" data-page="orders" onclick="showPage('orders', this)"><span>📋</span> Đơn hàng<span class="nav-badge" id="pendingBadge"></span></div>
+      <div class="nav-item" data-page="menu" onclick="showPage('menu', this)"><span>🍽️</span> Quản lý menu</div>
+      <div class="nav-item" data-page="revenue" onclick="showPage('revenue', this)"><span>💰</span> Doanh thu & Lịch sử</div>
     </nav>
     <div style="padding:16px 20px;font-size:12px;color:rgba(255,255,255,0.4);border-top:1px solid rgba(255,255,255,0.1);">
       <a href="/kitchen" target="_blank" style="color:rgba(255,255,255,0.5);text-decoration:none;font-weight:600;">👨‍🍳 Mở màn hình bếp →</a>
@@ -317,7 +427,10 @@
   <div class="main">
     <!-- Topbar -->
     <div class="topbar">
-      <h1 id="pageTitle">Dashboard</h1>
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
       <div class="conn-pill"><div class="dot"></div><span>Đang kết nối...</span></div>
     </div>
 
@@ -326,16 +439,21 @@
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-card-icon">📋</div><div class="stat-card-num" id="dashTotal">0</div><div class="stat-card-label">Tổng đơn hôm nay</div></div>
         <div class="stat-card"><div class="stat-card-icon">⏳</div><div class="stat-card-num" id="dashPending">0</div><div class="stat-card-label">Đang xử lý</div></div>
-        <div class="stat-card"><div class="stat-card-icon">🪑</div><div class="stat-card-num" id="dashOccupied">0</div><div class="stat-card-label">Bàn đang dùng</div></div>
+        <div class="stat-card"><div class="stat-card-icon">💵</div><div class="stat-card-num" id="dashOccupied">0</div><div class="stat-card-label">Đơn chưa thanh toán</div></div>
         <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-card-num" id="dashRevenue">0đ</div><div class="stat-card-label">Doanh thu hôm nay</div></div>
       </div>
 
-      <div class="orders-table">
-        <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;">📋 Đơn hàng gần đây</div>
-        <table>
-          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Số món</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
-          <tbody id="dashOrdersBody"></tbody>
-        </table>
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;">📋 Đơn hàng gần đây</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Mã đơn</th><th>Khách hàng</th><th class="hide-sm">Số món</th>
+              <th>Tổng tiền</th><th>Trạng thái</th><th class="hide-sm">Thời gian</th><th>Thao tác</th>
+            </tr></thead>
+            <tbody id="dashOrdersBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -353,14 +471,20 @@
           <button class="filter-tab" onclick="filterOrders('pending',this)">⏳ Chờ</button>
           <button class="filter-tab" onclick="filterOrders('preparing',this)">🔥 Đang nấu</button>
           <button class="filter-tab" onclick="filterOrders('ready',this)">✅ Xong</button>
-          <button class="filter-tab" onclick="filterOrders('paid',this)">💰 Đã thanh toán</button>
+          <button class="filter-tab" onclick="filterOrders('paid',this)">💰 Đã TT</button>
         </div>
       </div>
-      <div class="orders-table">
-        <table>
-          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Các món</th><th>Ghi chú</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Mã đơn</th><th>Khách hàng</th><th class="hide-sm">Các món</th>
+              <th class="hide-sm">Ghi chú</th><th>Tổng tiền</th><th>Trạng thái</th>
+              <th class="hide-sm">Thời gian</th><th>Thao tác</th>
+            </tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -373,37 +497,75 @@
           <div class="form-group"><label>Giá (đ)</label><input class="form-input" id="newPrice" type="number" placeholder="65000"/></div>
           <div class="form-group"><label>Danh mục</label>
             <select class="form-input" id="newCat">
-              <option>Khai vị</option><option>Món chính</option><option>Đồ uống</option><option>Tráng miệng</option>
+              <option>Khai vị</option><option>Món chính</option><option>Đồ uống</option><option>Tráng miệng</option><option>Thêm</option>
             </select>
           </div>
-          <div class="form-group"><label>Icon</label><input class="form-input" id="newImage" placeholder="🍜" maxlength="2"/></div>
+          <div class="form-group"><label>Icon / Ảnh</label><input class="form-input" id="newImage" placeholder="🍜 hoặc /menu/xxx.jpg"/></div>
           <button class="add-btn" onclick="addMenuItem()">Thêm</button>
         </div>
       </div>
       <div class="menu-grid-admin" id="menuGridAdmin"></div>
     </div>
 
-    <!-- Revenue -->
+    <!-- Revenue & History -->
     <div class="page" id="page-revenue">
       <div class="section-header">
-        <div class="section-title">💰 Doanh Thu</div>
-        <button class="filter-tab active" onclick="exportExcel()" style="background: var(--green); color: white;">📥 Xuất Excel</button>
+        <div class="section-title">💰 Doanh Thu & Lịch Sử Đơn Hàng</div>
       </div>
+
+      <!-- Bộ lọc ngày -->
+      <div class="filter-bar">
+        <div class="form-group">
+          <label>Từ ngày</label>
+          <input type="date" class="form-input" id="filterFrom"/>
+        </div>
+        <div class="form-group">
+          <label>Đến ngày</label>
+          <input type="date" class="form-input" id="filterTo"/>
+        </div>
+        <div class="form-group" style="flex: 2; min-width: 180px;">
+          <label>Tìm kiếm (mã đơn / khách)</label>
+          <input type="text" class="form-input" id="filterSearch" placeholder="VD: A1B2C3"/>
+        </div>
+        <button class="apply-btn" onclick="applyFilter()">🔍 Lọc</button>
+        <button class="export-btn" onclick="exportExcel()">📥 Xuất Excel</button>
+        <div class="preset-row">
+          <button class="preset-btn active" data-preset="today" onclick="setPreset('today', this)">Hôm nay</button>
+          <button class="preset-btn" data-preset="7" onclick="setPreset('7', this)">7 ngày</button>
+          <button class="preset-btn" data-preset="30" onclick="setPreset('30', this)">30 ngày</button>
+          <button class="preset-btn" data-preset="90" onclick="setPreset('90', this)">3 tháng</button>
+        </div>
+        <div class="hint">💡 Khoảng lọc tối đa là 3 tháng (92 ngày). Dữ liệu lấy trực tiếp từ database.</div>
+      </div>
+
       <div class="revenue-cards">
-        <div class="rev-card"><div class="rev-label">💰 Doanh thu hôm nay</div><div class="rev-amount" id="revToday">0đ</div></div>
+        <div class="rev-card"><div class="rev-label">💰 Doanh thu (khoảng đã lọc)</div><div class="rev-amount" id="revToday">0đ</div></div>
         <div class="rev-card"><div class="rev-label">📋 Đơn đã thanh toán</div><div class="rev-amount" id="revCount">0</div></div>
-        <div class="rev-card"><div class="rev-label">🍽️ Trung bình/đơn</div><div class="rev-amount" id="revAvg">0đ</div></div>
+        <div class="rev-card"><div class="rev-label">🍽️ Trung bình / đơn</div><div class="rev-amount" id="revAvg">0đ</div></div>
       </div>
-      <div class="orders-table">
-        <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;">💰 Lịch sử thanh toán</div>
-        <table>
-          <thead><tr><th>Mã đơn</th><th>Bàn</th><th>Các món</th><th>Tổng tiền</th><th>Thời gian thanh toán</th></tr></thead>
-          <tbody id="revenueBody"></tbody>
-        </table>
+
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>📜 Lịch sử đơn hàng</span>
+          <span id="historyCount" style="font-size:12px;color:var(--muted);font-weight:500;">0 đơn</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>STT</th><th>Mã đơn</th><th>Khách hàng</th>
+              <th class="hide-sm">Các món</th><th>Tổng tiền</th>
+              <th>Trạng thái</th><th class="hide-sm">Thời gian</th>
+            </tr></thead>
+            <tbody id="revenueBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Toast container for new-order notifications -->
+<div class="toast-container" id="toastContainer"></div>
 
 <!-- QR Modal -->
 <div class="modal-bg" id="qrModal">
@@ -420,146 +582,276 @@
 </div>
 
 <script>
-const socket = io('https://banh-mi-cha-ca-nong.onrender.com');
+const socket = io();
 let tables = {};
 let orders = {};
 let menu = [];
 let currentQRTable = null;
 let orderFilter = 'all';
+let historyList = [];
+let currentPreset = 'today';
 
 socket.emit('join_admin');
 
 socket.on('connect', () => {
   document.querySelector('.conn-pill span').textContent = 'Đã kết nối';
 });
-
-// Load initial data
-Promise.all([
-  fetch('/api/tables').then(r => r.json()),
-  fetch('/api/orders').then(r => r.json()),
-  fetch('/api/menu').then(r => r.json()),
-]).then(([tablesData, ordersData, menuData]) => {
-  tablesData.forEach(t => tables[t.tableId] = t);
-  ordersData.forEach(o => orders[o.orderId] = o);
-  menu = menuData;
-  renderAll();
+socket.on('disconnect', () => {
+  document.querySelector('.conn-pill span').textContent = 'Mất kết nối';
 });
 
-socket.on('new_order', (order) => { orders[order.orderId] = order; renderAll(); });
+// Load initial data
+function loadInitial() {
+  return Promise.all([
+    fetch('/api/tables').then(r => r.json()),
+    fetch('/api/orders').then(r => r.json()),
+    fetch('/api/menu').then(r => r.json()),
+  ]).then(([tablesData, ordersData, menuData]) => {
+    tables = {};
+    tablesData.forEach(t => tables[t.tableId] = t);
+    orders = {};
+    ordersData.forEach(o => orders[o.orderId] = o);
+    menu = menuData;
+    setPreset('today');
+    renderAll();
+  }).catch(err => console.error('Lỗi tải dữ liệu:', err));
+}
+loadInitial();
+
+socket.on('new_order', (order) => {
+  orders[order.orderId] = order;
+  renderAll();
+  notifyNewOrder(order);
+});
 socket.on('order_updated', (order) => { orders[order.orderId] = order; renderAll(); });
 socket.on('table_updated', (table) => { tables[table.tableId] = table; renderTables(); });
-socket.on('menu_updated', (newMenu) => { menu = newMenu; renderMenuAdmin(); });
+socket.on('menu_updated', (newMenu) => { fetch('/api/menu').then(r=>r.json()).then(m=>{menu=m; renderMenuAdmin();}); });
 
-function renderAll() { renderDashboard(); renderTables(); renderOrders(); renderMenuAdmin(); renderRevenue(); }
+function renderAll() {
+  renderDashboard(); renderTables(); renderOrders(); renderMenuAdmin();
+  applyFilter(); // Refresh revenue từ server
+}
 
-function showPage(name) {
+function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  
-  if (event && event.currentTarget) {
-    event.currentTarget.classList.add('active');
+  if (el) el.classList.add('active');
+  else {
+    const target = document.querySelector(`.nav-item[data-page="${name}"]`);
+    if (target) target.classList.add('active');
   }
-
-  // Đóng menu mobile khi chọn nav item
-  document.querySelector('.sidebar').classList.remove('show');
-
-  // Chỉnh lại tên tiêu đề cho phù hợp bán mang đi
+  closeMobileMenu();
   const titles = {
-    dashboard: 'Tổng quan cửa hàng', 
-    tables: 'Mã QR Mang Đi', // Thay vì "Bàn & QR Code"
-    orders: 'Đơn hàng mới', 
-    menu: 'Thực đơn bánh mì', 
-    revenue: 'Doanh thu bán hàng'
+    dashboard: 'Dashboard',
+    tables: 'QR bán hàng',
+    orders: 'Đơn hàng',
+    menu: 'Thực đơn',
+    revenue: 'Doanh thu & Lịch sử'
   };
-  
-  document.getElementById('pageTitle').textContent = titles[name];
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+
+  if (name === 'revenue') applyFilter();
 }
 
-// Toggle mobile menu
 function toggleMobileMenu() {
-  document.querySelector('.sidebar').classList.toggle('show');
+  document.getElementById('sidebar').classList.toggle('show');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('show');
+  document.getElementById('sidebarOverlay').classList.remove('show');
 }
 
 function statusBadge(status) {
-  const map = { pending:'⏳ Chờ xử lý', preparing:'🔥 Đang nấu', ready:'✅ Sẵn sàng', paid:'💰 Đã thanh toán' };
+  const map = { pending:'⏳ Chờ', preparing:'🔥 Đang nấu', ready:'✅ Sẵn sàng', paid:'💰 Đã TT' };
   const cls = { pending:'status-pending', preparing:'status-preparing', ready:'status-ready', paid:'status-paid' };
-  return `<span class="status-badge ${cls[status]}">${map[status]||status}</span>`;
+  return `<span class="status-badge ${cls[status]||''}">${map[status]||status}</span>`;
 }
 
+function fmtMoney(n) { return (n||0).toLocaleString('vi') + 'đ'; }
+
+/* ========== Thông báo đơn mới (beep + toast) ========== */
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    // Hai tiếng beep nối
+    [0, 0.18].forEach((delay, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = i === 0 ? 880 : 1175;
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + 0.15);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime + delay);
+      osc.stop(audioCtx.currentTime + delay + 0.16);
+    });
+  } catch (e) { /* browser chặn autoplay trước khi user tương tác */ }
+}
+
+function showToast(html) {
+  const wrap = document.getElementById('toastContainer');
+  if (!wrap) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = html;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+function notifyNewOrder(order) {
+  beep();
+  const name = order.customerName || 'Khách';
+  const items = (order.items || []).length;
+  showToast(`🛎️ <strong>Đơn mới #${order.orderId}</strong><br>${name} • ${items} món • ${fmtMoney(order.total)}`);
+  // Tab title nhấp nháy
+  flashTitle(`🔔 Đơn mới #${order.orderId}`);
+}
+
+let titleFlashInterval = null;
+const defaultTitle = document.title;
+function flashTitle(msg) {
+  if (titleFlashInterval) clearInterval(titleFlashInterval);
+  let toggle = false;
+  titleFlashInterval = setInterval(() => {
+    document.title = toggle ? defaultTitle : msg;
+    toggle = !toggle;
+  }, 900);
+  // Tự tắt khi user focus lại tab
+  const stop = () => {
+    clearInterval(titleFlashInterval);
+    titleFlashInterval = null;
+    document.title = defaultTitle;
+    window.removeEventListener('focus', stop);
+  };
+  window.addEventListener('focus', stop);
+}
+
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ========== Dashboard ========== */
 function renderDashboard() {
   const all = Object.values(orders);
   const today = all.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
   const active = all.filter(o => ['pending','preparing','ready'].includes(o.status));
   const paidToday = today.filter(o => o.status === 'paid');
   const revenue = paidToday.reduce((s, o) => s + o.total, 0);
-  const occupied = Object.values(tables).filter(t => t.status === 'occupied').length;
+  // "Đơn chưa thanh toán" = tất cả đơn (mọi ngày) chưa có trạng thái paid
+  const unpaidTotal = all.filter(o => o.status !== 'paid').length;
 
   document.getElementById('dashTotal').textContent = today.length;
   document.getElementById('dashPending').textContent = active.length;
-  document.getElementById('dashOccupied').textContent = occupied;
-  document.getElementById('dashRevenue').textContent = revenue.toLocaleString('vi') + 'đ';
+  document.getElementById('dashOccupied').textContent = unpaidTotal;
+  document.getElementById('dashRevenue').textContent = fmtMoney(revenue);
+
+  // Cập nhật badge số đơn pending trên nav
+  const navBadge = document.getElementById('pendingBadge');
+  if (navBadge) {
+    if (active.length > 0) {
+      navBadge.textContent = active.length;
+      navBadge.style.display = 'inline-flex';
+    } else {
+      navBadge.style.display = 'none';
+    }
+  }
 
   const recent = all.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10);
-  document.getElementById('dashOrdersBody').innerHTML = recent.map(o => `
+  const body = document.getElementById('dashOrdersBody');
+  if (!recent.length) {
+    body.innerHTML = `<tr><td colspan="7" class="empty">Chưa có đơn nào</td></tr>`;
+    return;
+  }
+  body.innerHTML = recent.map(o => `
     <tr>
-      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
-      <td>${o.tableName}</td>
-      <td>${o.items.length} món</td>
-      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
+      <td><strong style="color:var(--accent)">#${escapeHtml(o.orderId)}</strong></td>
+      <td>${escapeHtml(o.customerName || o.tableName || '—')}</td>
+      <td class="hide-sm">${o.items.length} món</td>
+      <td><strong>${fmtMoney(o.total)}</strong></td>
       <td>${statusBadge(o.status)}</td>
-      <td style="color:var(--muted)">${new Date(o.createdAt).toLocaleTimeString('vi',{hour:'2-digit',minute:'2-digit'})}</td>
-      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 Thanh toán</button>` : '—'}</td>
+      <td class="hide-sm" style="color:var(--muted)">${new Date(o.createdAt).toLocaleTimeString('vi',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 TT</button>` : '—'}</td>
     </tr>
   `).join('');
 }
 
+/* ========== QR bán hàng (single takeaway) ========== */
 function renderTables() {
-  document.getElementById('tablesGrid').innerHTML = Object.values(tables).map(t => `
-    <div class="table-card ${t.status}" onclick="showQR('${t.tableId}','${t.tableName}')">
-      <div class="table-icon">${t.status === 'occupied' ? '🍽️' : '🪑'}</div>
-      <div class="table-name">${t.tableName}</div>
-      <div class="table-status">${t.status === 'occupied' ? '● Đang dùng' : '○ Trống'}</div>
-      <button class="qr-btn" onclick="event.stopPropagation();showQR('${t.tableId}','${t.tableName}')">📱 Xem QR Code</button>
+  const grid = document.getElementById('tablesGrid');
+  if (!grid) return;
+  grid.innerHTML = `
+    <div class="takeaway-qr-card">
+      <div class="tqc-title">📱 Mã QR cho khách quét đặt món mang đi</div>
+      <div class="tqc-desc">Khách quét mã này để vào trang menu và đặt món. In mã và dán ở quầy để mời khách đặt online.</div>
+      <div class="tqc-actions">
+        <button class="qr-btn-big" onclick="showQR('takeaway','Mang Đi')">📱 Xem &amp; Tải QR</button>
+      </div>
     </div>
-  `).join('');
+  `;
 }
 
+/* ========== Orders ========== */
 function renderOrders() {
   const all = Object.values(orders).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const filtered = orderFilter === 'all' ? all : all.filter(o => o.status === orderFilter);
-  document.getElementById('ordersBody').innerHTML = filtered.map(o => `
+  const body = document.getElementById('ordersBody');
+  if (!filtered.length) {
+    body.innerHTML = `<tr><td colspan="8" class="empty">Không có đơn nào</td></tr>`;
+    return;
+  }
+  body.innerHTML = filtered.map(o => `
     <tr>
-      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
-      <td>${o.tableName}</td>
-      <td style="font-size:12px;max-width:200px;">${o.items.map(i=>`${i.image}${i.name}×${i.quantity}`).join(', ')}</td>
-      <td style="font-size:12px;color:var(--muted)">${o.note || '—'}</td>
-      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
+      <td><strong style="color:var(--accent)">#${escapeHtml(o.orderId)}</strong></td>
+      <td>${escapeHtml(o.customerName || o.tableName || '—')}</td>
+      <td class="hide-sm" style="font-size:12px;max-width:200px;">${o.items.map(i=>`${escapeHtml(i.name)}×${i.quantity}`).join(', ')}</td>
+      <td class="hide-sm" style="font-size:12px;color:var(--muted)">${escapeHtml(o.note) || '—'}</td>
+      <td><strong>${fmtMoney(o.total)}</strong></td>
       <td>${statusBadge(o.status)}</td>
-      <td style="color:var(--muted);font-size:12px;">${new Date(o.createdAt).toLocaleString('vi')}</td>
-      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 Thanh toán</button>` : '<span style="color:var(--muted);font-size:12px;">Đã TT</span>'}</td>
+      <td class="hide-sm" style="color:var(--muted);font-size:12px;">${new Date(o.createdAt).toLocaleString('vi')}</td>
+      <td>${o.status !== 'paid' ? `<button class="checkout-btn" onclick="checkout('${o.orderId}')">💰 TT</button>` : '<span style="color:var(--muted);font-size:12px;">Đã TT</span>'}</td>
     </tr>
   `).join('');
 }
 
 function filterOrders(filter, btn) {
   orderFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#page-orders .filter-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderOrders();
 }
 
+async function checkout(orderId) {
+  if (!confirm('Xác nhận thanh toán đơn #' + orderId + '?')) return;
+  try {
+    const res = await fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' });
+    if (!res.ok) throw new Error('Lỗi thanh toán');
+    // socket sẽ emit order_updated
+  } catch (err) {
+    alert('Lỗi: ' + err.message);
+  }
+}
+
+/* ========== Menu ========== */
 function renderMenuAdmin() {
-  document.getElementById('menuGridAdmin').innerHTML = menu.map(item => `
+  const grid = document.getElementById('menuGridAdmin');
+  if (!menu.length) { grid.innerHTML = `<div class="empty">Chưa có món nào</div>`; return; }
+  grid.innerHTML = menu.map(item => {
+    const isPath = item.image && (item.image.startsWith('/') || item.image.startsWith('http'));
+    const imgHtml = isPath
+      ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" onerror="this.style.display='none'">`
+      : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:36px;background:var(--accent-light);">${escapeHtml(item.image || '🍽️')}</div>`;
+    return `
     <div class="menu-card-admin">
       <div class="mca-top">
-        <div class="mca-emoji">
-          <img src="${item.image}" alt="${item.name}">
-        </div>
+        <div class="mca-emoji">${imgHtml}</div>
         <div class="mca-info">
-          <div class="mca-name">${item.name}</div>
-          <div class="mca-cat">${item.category}</div>
-          <div class="mca-price">${item.price.toLocaleString('vi')}đ</div>
+          <div class="mca-name">${escapeHtml(item.name)}</div>
+          <div class="mca-cat">${escapeHtml(item.category || '')}</div>
+          <div class="mca-price">${fmtMoney(item.price)}</div>
         </div>
       </div>
       <div class="mca-actions">
@@ -569,89 +861,224 @@ function renderMenuAdmin() {
         <button class="del-btn" onclick="deleteItem(${item.id})">🗑️</button>
       </div>
     </div>
-  `).join('');
+    `;
+  }).join('');
+}
+
+async function addMenuItem() {
+  const name = document.getElementById('newName').value.trim();
+  const price = parseInt(document.getElementById('newPrice').value);
+  const category = document.getElementById('newCat').value;
+  const image = document.getElementById('newImage').value.trim();
+  if (!name || !price) { alert('Vui lòng nhập tên và giá!'); return; }
+  try {
+    const res = await fetch('/api/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price, category, image })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Lỗi');
+    document.getElementById('newName').value = '';
+    document.getElementById('newPrice').value = '';
+    document.getElementById('newImage').value = '';
+    // Refresh menu
+    const m = await fetch('/api/menu').then(r => r.json());
+    menu = m;
+    renderMenuAdmin();
+  } catch (err) {
+    alert('Lỗi: ' + err.message);
+  }
+}
+
+async function toggleItem(id) {
+  try {
+    const res = await fetch(`/api/menu/${id}/toggle`, { method: 'PUT' });
+    if (!res.ok) throw new Error('Lỗi');
+    const m = await fetch('/api/menu').then(r => r.json());
+    menu = m;
+    renderMenuAdmin();
+  } catch (err) {
+    alert('Lỗi: ' + err.message);
+  }
+}
+
+async function deleteItem(id) {
+  if (!confirm('Xác nhận xóa món này?')) return;
+  try {
+    const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Lỗi');
+    const m = await fetch('/api/menu').then(r => r.json());
+    menu = m;
+    renderMenuAdmin();
+  } catch (err) {
+    alert('Lỗi: ' + err.message);
+  }
+}
+
+/* ========== QR Modal ========== */
+async function showQR(tableId, tableName) {
+  currentQRTable = tableName;
+  document.getElementById('modalTitle').textContent = 'QR Code - ' + tableName;
+  document.getElementById('modalDesc').textContent = 'Khách quét mã để đặt món';
+  document.getElementById('qrImg').src = '';
+  document.getElementById('qrUrl').textContent = 'Đang tạo...';
+  document.getElementById('qrModal').classList.add('show');
+  try {
+    const endpoint = tableId === 'takeaway' ? '/api/qr/takeaway' : `/api/qr/${encodeURIComponent(tableId)}`;
+    const res = await fetch(endpoint);
+    const data = await res.json();
+    document.getElementById('qrImg').src = data.qr;
+    document.getElementById('qrUrl').textContent = data.url;
+  } catch (err) {
+    document.getElementById('qrUrl').textContent = 'Lỗi tạo QR';
+  }
+}
+
+function closeModal() {
+  document.getElementById('qrModal').classList.remove('show');
+}
+
+function downloadQR() {
+  const img = document.getElementById('qrImg');
+  if (!img.src) return;
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = `QR-${(currentQRTable||'table').replace(/\s+/g,'_')}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ========== Revenue & History (query server) ========== */
+function toYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function setPreset(preset, btn) {
+  currentPreset = preset;
+  const today = new Date();
+  const fromInput = document.getElementById('filterFrom');
+  const toInput = document.getElementById('filterTo');
+
+  if (preset === 'today') {
+    fromInput.value = toYMD(today);
+    toInput.value = toYMD(today);
+  } else {
+    const days = parseInt(preset);
+    const from = new Date();
+    from.setDate(today.getDate() - (days - 1));
+    fromInput.value = toYMD(from);
+    toInput.value = toYMD(today);
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  const target = btn || document.querySelector(`.preset-btn[data-preset="${preset}"]`);
+  if (target) target.classList.add('active');
+}
+
+function getFilterRange() {
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+  return { from, to };
+}
+
+function validateRange(from, to) {
+  if (!from || !to) return true;
+  const f = new Date(from + 'T00:00:00');
+  const t = new Date(to + 'T23:59:59');
+  if (f > t) {
+    alert('Ngày bắt đầu phải trước ngày kết thúc!');
+    return false;
+  }
+  const days = (t - f) / (1000*60*60*24);
+  if (days > 92) {
+    alert('Khoảng thời gian tối đa là 3 tháng (92 ngày)!');
+    return false;
+  }
+  return true;
+}
+
+async function applyFilter() {
+  const { from, to } = getFilterRange();
+  if (!validateRange(from, to)) return;
+  const q = document.getElementById('filterSearch').value.trim();
+
+  // Query thẳng từ server (SQLite), không dùng RAM
+  try {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    if (q) params.append('q', q);
+    const res = await fetch('/api/history?' + params.toString());
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Lỗi: ' + (err.error || 'Không tải được dữ liệu'));
+      return;
+    }
+    historyList = await res.json();
+    renderRevenue();
+  } catch (err) {
+    alert('Lỗi kết nối server: ' + err.message);
+  }
 }
 
 function renderRevenue() {
-  const paid = Object.values(orders).filter(o => o.status === 'paid');
-  const today = paid.filter(o => new Date(o.paidAt||o.createdAt).toDateString() === new Date().toDateString());
-  const total = today.reduce((s, o) => s + o.total, 0);
-  const avg = today.length ? Math.round(total / today.length) : 0;
-  document.getElementById('revToday').textContent = total.toLocaleString('vi') + 'đ';
-  document.getElementById('revCount').textContent = today.length;
-  document.getElementById('revAvg').textContent = avg.toLocaleString('vi') + 'đ';
-  document.getElementById('revenueBody').innerHTML = paid.sort((a,b)=>new Date(b.paidAt||b.createdAt)-new Date(a.paidAt||a.createdAt)).map(o=>`
+  const list = historyList || [];
+  const paid = list.filter(o => o.status === 'paid');
+  const total = paid.reduce((s,o) => s + o.total, 0);
+  const avg = paid.length ? Math.round(total / paid.length) : 0;
+
+  document.getElementById('revToday').textContent = fmtMoney(total);
+  document.getElementById('revCount').textContent = paid.length;
+  document.getElementById('revAvg').textContent = fmtMoney(avg);
+  document.getElementById('historyCount').textContent = `${list.length} đơn`;
+
+  const body = document.getElementById('revenueBody');
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="7" class="empty">Không có đơn nào trong khoảng đã chọn</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map((o, idx) => `
     <tr>
-      <td><strong style="color:var(--accent)">#${o.orderId}</strong></td>
-      <td>${o.tableName}</td>
-      <td style="font-size:12px;">${o.items.map(i=>`${i.image}${i.name}×${i.quantity}`).join(', ')}</td>
-      <td><strong>${o.total.toLocaleString('vi')}đ</strong></td>
-      <td style="color:var(--muted);font-size:12px;">${new Date(o.paidAt||o.createdAt).toLocaleString('vi')}</td>
+      <td>${idx + 1}</td>
+      <td><strong style="color:var(--accent)">#${escapeHtml(o.orderId)}</strong></td>
+      <td>${escapeHtml(o.tableName || o.customerName || '—')}</td>
+      <td class="hide-sm" style="font-size:12px;max-width:220px;">${(o.items||[]).map(i=>`${escapeHtml(i.name)}×${i.quantity}`).join(', ')}</td>
+      <td><strong>${fmtMoney(o.total)}</strong></td>
+      <td>${statusBadge(o.status)}</td>
+      <td class="hide-sm" style="color:var(--muted);font-size:12px;">${new Date(o.createdAt).toLocaleString('vi')}</td>
     </tr>
   `).join('');
 }
 
 function exportExcel() {
-  window.open('/api/export/excel', '_blank');
+  const { from, to } = getFilterRange();
+  if (!validateRange(from, to)) return;
+  const params = new URLSearchParams();
+  if (from) params.append('from', from);
+  if (to) params.append('to', to);
+  const url = '/api/export/excel?' + params.toString();
+  // Mở tab mới / trigger download
+  window.location.href = url;
 }
 
-function showQR(tableId, tableName) {
-  currentQRTable = tableId;
-  document.getElementById('modalTitle').textContent = `QR - ${tableName}`;
-  fetch(`/api/qr/${tableId}`)
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('qrImg').src = data.qr;
-      document.getElementById('qrUrl').textContent = data.url;
-      document.getElementById('qrModal').classList.add('show');
+// Cho phép Enter trong ô tìm kiếm để lọc
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('filterSearch');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') applyFilter();
     });
-}
+  }
+});
 
-function closeModal() { document.getElementById('qrModal').classList.remove('show'); }
-
-function downloadQR() {
-  const link = document.createElement('a');
-  link.href = document.getElementById('qrImg').src;
-  link.download = `QR-${currentQRTable}.png`;
-  link.click();
-}
-
-function checkout(orderId) {
-  if (!confirm('Xác nhận thanh toán đơn #' + orderId + '?')) return;
-  fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
-    .then(r => r.json())
-    .then(() => { renderAll(); });
-}
-
-function addMenuItem() {
-  const name = document.getElementById('newName').value.trim();
-  const price = document.getElementById('newPrice').value;
-  const category = document.getElementById('newCat').value;
-  const image = document.getElementById('newImage').value || '🍽️';
-  if (!name || !price) return alert('Vui lòng nhập tên và giá!');
-  fetch('/api/menu', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, price, category, image })
-  }).then(() => {
-    document.getElementById('newName').value = '';
-    document.getElementById('newPrice').value = '';
-    document.getElementById('newImage').value = '';
-  });
-}
-
-function toggleItem(id) {
-  const item = menu.find(m => m.id === id);
-  fetch(`/api/menu/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ available: !item.available })
-  });
-}
-
-function deleteItem(id) {
-  if (!confirm('Xóa món này?')) return;
-  fetch(`/api/menu/${id}`, { method: 'DELETE' });
-}
+// Đóng modal khi click ra ngoài
+document.getElementById('qrModal').addEventListener('click', (e) => {
+  if (e.target.id === 'qrModal') closeModal();
+});
 </script>
 </body>
 </html>

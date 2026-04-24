@@ -116,9 +116,6 @@ function updateOrderStatusInDB(orderId, status) {
   }
 }
 
-// Load dữ liệu khi khởi động
-loadFromDB();
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -132,28 +129,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ===================== DỮ LIỆU MẶC ĐỊNH (nếu không kết nối được DB) =====================
-let menu = [
-  { id: 1, name: 'Bánh Mì Chả Cá + Tặng Trà Tắc', price: 17000, category: 'Món chính',image: '/menu/banhmichaca.jpg', available: true },
-  { id: 2, name: 'Bánh Mì Chả Cá Trứng + Tặng Trà Tắc', price: 22000, category: 'Món chính',image: '/menu/banhmichatrung.jpg', available: true },
-  { id: 3, name: 'Bánh Mì Chả Cá Chả Lụa + Tặng Trà Tắc', price: 22000, category: 'Món chính',image: '/menu/banhmicalua.jpg', available: true },
-  { id: 4, name: 'Bánh Mì Chả Cá Đặc Biệt + Tặng Trà Tắc', price: 27000, category: 'Món chính',image: '/menu/banhmidacbiet.jpg', available: true },
-  { id: 5, name: 'Trứng Thêm', price: 5000, category: 'Thêm',image: '/menu/trung.png', available: true },
-  { id: 6, name: 'Chả Cá Thêm', price: 5000, category: 'Thêm',image: '/menu/chaca.jpg', available: true },
-  { id: 7, name: 'Chả Lụa Thêm', price: 5000, category: 'Thêm',image: '/menu/images.jpg', available: true },
-];
+let menu = [];
+let orders = {};
+let tables = {};
 
-let orders = {}; 
-let tables = {
-  'takeaway': {
-    tableId: 'takeaway',
-    tableName: 'Khách Mang Đi',
-    status: 'available',
-    currentSession: null,
-  }
-};
-
-// Khởi tạo kết nối database
-connectDB();
+// Load dữ liệu từ SQLite vào biến RAM (cache)
+loadFromDB();
 
 app.get('/', (req, res) => {
   res.redirect('/customer?table=takeaway');
@@ -175,6 +156,69 @@ app.get('/api/qr/takeaway', async (req, res) => {
     res.json({ qr: qrDataUrl, url });
   } catch (err) {
     res.status(500).json({ error: 'Lỗi tạo QR' });
+  }
+});
+
+// API tạo QR generic cho bất kỳ bàn nào
+app.get('/api/qr/:tableId', async (req, res) => {
+  const { tableId } = req.params;
+  const host = req.get('host');
+  const proto = req.protocol;
+  const url = `${proto}://${host}/customer?table=${encodeURIComponent(tableId)}`;
+  try {
+    const qrDataUrl = await QRCode.toDataURL(url, {
+      width: 500,
+      margin: 2,
+      color: { dark: '#1a1a2e', light: '#ffffff' }
+    });
+    res.json({ qr: qrDataUrl, url });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi tạo QR' });
+  }
+});
+
+// ===================== API MENU CRUD =====================
+app.post('/api/menu', (req, res) => {
+  try {
+    const { name, price, category, image } = req.body;
+    if (!name || !price) return res.status(400).json({ error: 'Thiếu tên hoặc giá' });
+    const result = db.prepare(
+      'INSERT INTO Menu (name, price, category, image, available) VALUES (?, ?, ?, ?, 1)'
+    ).run(name, Number(price), category || '', image || '');
+    const newItem = db.prepare('SELECT * FROM Menu WHERE id = ?').get(result.lastInsertRowid);
+    // Refresh cache
+    menu = db.prepare('SELECT * FROM Menu').all();
+    io.emit('menu_updated', menu.filter(m => m.available));
+    res.json(newItem);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/menu/:id/toggle', (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = db.prepare('SELECT * FROM Menu WHERE id = ?').get(id);
+    if (!item) return res.status(404).json({ error: 'Không tìm thấy món' });
+    const newAvail = item.available ? 0 : 1;
+    db.prepare('UPDATE Menu SET available = ? WHERE id = ?').run(newAvail, id);
+    menu = db.prepare('SELECT * FROM Menu').all();
+    io.emit('menu_updated', menu.filter(m => m.available));
+    res.json({ success: true, available: newAvail });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/menu/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare('DELETE FROM Menu WHERE id = ?').run(id);
+    menu = db.prepare('SELECT * FROM Menu').all();
+    io.emit('menu_updated', menu.filter(m => m.available));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -205,7 +249,6 @@ io.on('connection', (socket) => {
   console.log('Có người truy cập:', socket.id);
 
   socket.on('join_admin', () => socket.join('admin_room'));
-  socket.on('join_kitchen', () => socket.join('kitchen_room'));
 
   socket.on('place_order', (data) => {
     const orderId = uuidv4().slice(0, 6).toUpperCase();
@@ -221,14 +264,13 @@ io.on('connection', (socket) => {
       total: data.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     };
     orders[orderId] = order;
-    
+
     // Lưu vào SQLite
     saveOrderToDB(order);
-    
+
     socket.emit('order_confirmed', order);
     io.to('admin_room').emit('new_order', order);
-    io.to('kitchen_room').emit('new_order', order);
-    console.log(`Đơn mang đi mới: ${orderId}`);
+    console.log(`🛎️  Đơn mang đi mới: ${orderId}`);
   });
 });
 
@@ -251,107 +293,245 @@ app.put('/api/orders/:orderId/status', (req, res) => {
   res.json({ success: true });
 });
 
-// Cập nhật trạng thái từng món (bếp bấm toggle từng item)
-app.put('/api/orders/:orderId/items/:idx', (req, res) => {
-  const { orderId, idx } = req.params;
-  const { status } = req.body;
-  const order = orders[orderId];
-  if (!order) return res.status(404).json({ error: 'Không tìm thấy' });
-  order.items[parseInt(idx)].status = status;
-  io.emit('order_updated', order);
-  res.json({ success: true });
-});
+// ===================== AUTO-DELETE ĐƠN CŨ (>92 ngày) =====================
+function cleanupOldOrders() {
+  try {
+    // Lấy mốc thời gian 92 ngày trước (ISO string)
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 92);
+    const cutoffISO = cutoff.toISOString();
 
-// Route cho màn hình bếp
-app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'public/kitchen/index.html')));
+    const result = db.prepare('DELETE FROM Orders WHERE createdAt < ?').run(cutoffISO);
+    if (result.changes > 0) {
+      console.log(`🧹 Đã tự động xóa ${result.changes} đơn cũ hơn 92 ngày (trước ${cutoffISO})`);
+      // Refresh cache RAM
+      const ordersData = db.prepare('SELECT * FROM Orders ORDER BY createdAt DESC').all();
+      orders = {};
+      ordersData.forEach(o => {
+        try { o.items = JSON.parse(o.items); } catch { o.items = []; }
+        orders[o.orderId] = o;
+      });
+    }
+  } catch (err) {
+    console.error('❌ Lỗi cleanup orders:', err.message);
+  }
+}
+
+// Chạy cleanup ngay khi khởi động
+cleanupOldOrders();
+// Lặp lại mỗi 24 giờ
+setInterval(cleanupOldOrders, 24 * 60 * 60 * 1000);
+
+// Hàm helper: query orders từ SQLite theo khoảng ngày
+function queryOrdersFromDB({ from, to, status, q }) {
+  let sql = 'SELECT * FROM Orders WHERE 1=1';
+  const params = [];
+  if (from) {
+    sql += ' AND createdAt >= ?';
+    params.push(from);
+  }
+  if (to) {
+    sql += ' AND createdAt <= ?';
+    params.push(to);
+  }
+  if (status && status !== 'all') {
+    sql += ' AND status = ?';
+    params.push(status);
+  }
+  sql += ' ORDER BY createdAt DESC';
+  let rows = db.prepare(sql).all(...params);
+  rows = rows.map(r => {
+    try { r.items = JSON.parse(r.items); } catch { r.items = []; }
+    return r;
+  });
+  if (q) {
+    const kw = q.toLowerCase();
+    rows = rows.filter(o =>
+      (o.orderId || '').toLowerCase().includes(kw) ||
+      (o.tableName || '').toLowerCase().includes(kw) ||
+      (o.customerName || '').toLowerCase().includes(kw)
+    );
+  }
+  return rows;
+}
+
+// ===================== API LỊCH SỬ ĐƠN HÀNG (có lọc ngày) =====================
+app.get('/api/history', (req, res) => {
+  try {
+    const { from, to, status, q } = req.query;
+    const MAX_DAYS = 92; // ~3 tháng
+
+    if (from && to) {
+      const f = new Date(from + 'T00:00:00');
+      const t = new Date(to + 'T23:59:59');
+      if (f > t) return res.status(400).json({ error: 'Ngày bắt đầu phải trước ngày kết thúc' });
+      const diffDays = (t - f) / (1000 * 60 * 60 * 24);
+      if (diffDays > MAX_DAYS) {
+        return res.status(400).json({ error: 'Khoảng thời gian tối đa 3 tháng' });
+      }
+    }
+
+    const fromISO = from ? new Date(from + 'T00:00:00').toISOString() : null;
+    const toISO = to ? new Date(to + 'T23:59:59').toISOString() : null;
+
+    const list = queryOrdersFromDB({ from: fromISO, to: toISO, status, q });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ===================== API XUẤT EXCEL =====================
 app.get('/api/export/excel', async (req, res) => {
   try {
+    const { from, to } = req.query;
+    const MAX_DAYS = 92; // ~3 tháng
+
+    let fromDate = from ? new Date(from + 'T00:00:00') : null;
+    let toDate = to ? new Date(to + 'T23:59:59') : null;
+
+    if (fromDate && toDate) {
+      const diffDays = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+      if (diffDays > MAX_DAYS) {
+        return res.status(400).json({ error: 'Khoảng thời gian tối đa 3 tháng' });
+      }
+      if (fromDate > toDate) {
+        return res.status(400).json({ error: 'Ngày bắt đầu phải trước ngày kết thúc' });
+      }
+    }
+
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Restaurant QR';
     workbook.created = new Date();
 
-    // --- Sheet 1: Doanh thu theo ngày ---
+    // Lấy orders từ SQLite theo khoảng ngày
+    const fromISO = fromDate ? fromDate.toISOString() : null;
+    const toISO = toDate ? toDate.toISOString() : null;
+    let ordersList = queryOrdersFromDB({ from: fromISO, to: toISO });
+    ordersList.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    // Tiêu đề khoảng ngày
+    const rangeLabel = (fromDate || toDate)
+      ? `${fromDate ? fromDate.toLocaleDateString('vi-VN') : '...'} - ${toDate ? toDate.toLocaleDateString('vi-VN') : '...'}`
+      : 'Tất cả thời gian';
+
+    // --- Sheet 1: Doanh thu ---
     const revenueSheet = workbook.addWorksheet('Doanh Thu');
+    revenueSheet.mergeCells('A1:F1');
+    const titleCell = revenueSheet.getCell('A1');
+    titleCell.value = `BÁO CÁO DOANH THU - ${rangeLabel}`;
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+    revenueSheet.getRow(1).height = 28;
+
+    revenueSheet.getRow(3).values = ['STT', 'Mã Đơn', 'Ngày/Giờ', 'Bàn/Khách', 'Tổng Tiền', 'Trạng Thái'];
+    revenueSheet.getRow(3).font = { bold: true };
+    revenueSheet.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE1E4E8' } };
     revenueSheet.columns = [
-      { header: 'Mã Đơn', key: 'orderId', width: 15 },
-      { header: 'Ngày', key: 'date', width: 15 },
-      { header: 'Khách Hàng', key: 'customerName', width: 20 },
-      { header: 'Tổng Tiền', key: 'total', width: 15 },
-      { header: 'Trạng Thái', key: 'status', width: 15 },
+      { key: 'stt', width: 6 },
+      { key: 'orderId', width: 14 },
+      { key: 'date', width: 20 },
+      { key: 'customerName', width: 22 },
+      { key: 'total', width: 15 },
+      { key: 'status', width: 18 },
     ];
 
-    const ordersList = Object.values(orders);
     let totalRevenue = 0;
-    ordersList.forEach(order => {
-      revenueSheet.addRow({
+    let paidCount = 0;
+    ordersList.forEach((order, idx) => {
+      const row = revenueSheet.addRow({
+        stt: idx + 1,
         orderId: order.orderId,
-        date: new Date(order.createdAt).toLocaleDateString('vi-VN'),
-        customerName: order.customerName,
+        date: new Date(order.createdAt).toLocaleString('vi-VN'),
+        customerName: order.tableName || order.customerName,
         total: order.total,
-        status: order.status
+        status: order.status === 'paid' ? 'Đã thanh toán'
+              : order.status === 'pending' ? 'Chờ xử lý'
+              : order.status === 'preparing' ? 'Đang nấu'
+              : order.status === 'ready' ? 'Sẵn sàng' : order.status
       });
-      if (order.status === 'paid') totalRevenue += order.total;
+      row.getCell('total').numFmt = '#,##0 "đ"';
+      if (order.status === 'paid') {
+        totalRevenue += order.total;
+        paidCount++;
+      }
     });
 
-    // Thêm dòng tổng cộng
     revenueSheet.addRow({});
-    revenueSheet.addRow({ orderId: 'TỔNG CỘNG', total: totalRevenue });
+    const totalRow = revenueSheet.addRow({ orderId: 'TỔNG DOANH THU', total: totalRevenue });
+    totalRow.font = { bold: true };
+    totalRow.getCell('total').numFmt = '#,##0 "đ"';
+    totalRow.getCell('total').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
 
-    // --- Sheet 2: Số lượng bán ra ---
+    // --- Sheet 2: Chi tiết món ---
     const itemsSheet = workbook.addWorksheet('Chi Tiết Món');
     itemsSheet.columns = [
-      { header: 'Mã Đơn', key: 'orderId', width: 15 },
-      { header: 'Tên Món', key: 'name', width: 35 },
+      { header: 'Mã Đơn', key: 'orderId', width: 14 },
+      { header: 'Ngày', key: 'date', width: 20 },
+      { header: 'Tên Món', key: 'name', width: 40 },
       { header: 'Số Lượng', key: 'quantity', width: 12 },
-      { header: 'Đơn Giá', key: 'price', width: 12 },
-      { header: 'Thành Tiền', key: 'subtotal', width: 15 },
+      { header: 'Đơn Giá', key: 'price', width: 14 },
+      { header: 'Thành Tiền', key: 'subtotal', width: 16 },
     ];
+    itemsSheet.getRow(1).font = { bold: true };
+    itemsSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE1E4E8' } };
 
     const itemStats = {};
     ordersList.forEach(order => {
       order.items.forEach(item => {
         const key = item.name;
-        if (!itemStats[key]) {
-          itemStats[key] = { quantity: 0, price: item.price };
-        }
+        if (!itemStats[key]) itemStats[key] = { quantity: 0, revenue: 0 };
         itemStats[key].quantity += item.quantity;
-        itemsSheet.addRow({
+        itemStats[key].revenue += item.price * item.quantity;
+        const r = itemsSheet.addRow({
           orderId: order.orderId,
+          date: new Date(order.createdAt).toLocaleString('vi-VN'),
           name: item.name,
           quantity: item.quantity,
           price: item.price,
           subtotal: item.price * item.quantity
         });
+        r.getCell('price').numFmt = '#,##0 "đ"';
+        r.getCell('subtotal').numFmt = '#,##0 "đ"';
       });
     });
 
-    // --- Sheet 3: Thống kê tổng hợp ---
+    // --- Sheet 3: Tổng kết ---
     const statsSheet = workbook.addWorksheet('Tổng Kết');
-    statsSheet.addRow(['BÁNH MÌ CHẢ CÁ NÓNG - BÁO CÁO']);
-    statsSheet.addRow(['Ngày:', new Date().toLocaleDateString('vi-VN')]);
+    statsSheet.columns = [{ width: 28 }, { width: 22 }];
+    statsSheet.addRow(['BÁNH MÌ CHẢ CÁ NÓNG - BÁO CÁO']).font = { bold: true, size: 14 };
+    statsSheet.addRow(['Khoảng thời gian:', rangeLabel]);
+    statsSheet.addRow(['Ngày xuất:', new Date().toLocaleString('vi-VN')]);
     statsSheet.addRow([]);
-    statsSheet.addRow(['TỔNG QUAN']);
+    statsSheet.addRow(['TỔNG QUAN']).font = { bold: true };
     statsSheet.addRow(['Tổng số đơn:', ordersList.length]);
-    statsSheet.addRow(['Đơn đã thanh toán:', ordersList.filter(o => o.status === 'paid').length]);
+    statsSheet.addRow(['Đơn đã thanh toán:', paidCount]);
     statsSheet.addRow(['Đơn chờ xử lý:', ordersList.filter(o => o.status === 'pending').length]);
-    statsSheet.addRow(['Doanh thu:', totalRevenue + 'đ']);
+    const revRow = statsSheet.addRow(['Doanh thu:', totalRevenue]);
+    revRow.getCell(2).numFmt = '#,##0 "đ"';
+    revRow.font = { bold: true };
+    statsSheet.addRow(['Trung bình/đơn:', paidCount ? Math.round(totalRevenue / paidCount) : 0])
+      .getCell(2).numFmt = '#,##0 "đ"';
     statsSheet.addRow([]);
-    statsSheet.addRow(['TOP MÓN BÁN CHẠY']);
-    
-    // Sort items by quantity
+    statsSheet.addRow(['TOP MÓN BÁN CHẠY']).font = { bold: true };
+    statsSheet.addRow(['Tên món', 'Số lượng', 'Doanh thu']).font = { bold: true };
+
     const topItems = Object.entries(itemStats)
       .sort((a, b) => b[1].quantity - a[1].quantity)
       .slice(0, 10);
-    
     topItems.forEach(([name, data]) => {
-      statsSheet.addRow([name, data.quantity + ' cái']);
+      const r = statsSheet.addRow([name, data.quantity, data.revenue]);
+      r.getCell(3).numFmt = '#,##0 "đ"';
     });
 
-    // Set response headers
+    // Tên file
+    const fromStr = fromDate ? fromDate.toISOString().slice(0, 10) : 'all';
+    const toStr = toDate ? toDate.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const fileName = `bao-cao-${fromStr}_${toStr}.xlsx`;
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=bao-cao-ban-hang-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
 
     await workbook.xlsx.write(res);
     res.end();

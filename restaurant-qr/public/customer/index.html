@@ -300,7 +300,7 @@
   </div>
   <div class="cart-items" id="cartItems"></div>
   <div class="note-area">
-    <label>📝 Ghi chú cho bếp</label>
+    <label>📝 Ghi chú cho nhà hàng</label>
     <textarea id="noteInput" placeholder="VD: Ít cay, không hành, thêm đá..."></textarea>
   </div>
   <div class="cart-footer">
@@ -316,7 +316,7 @@
 <div class="success-screen" id="successScreen">
   <div class="success-icon">🎉</div>
   <h2>Đặt món thành công!</h2>
-  <p>Bếp đã nhận được đơn của bạn<br/>và đang chuẩn bị. Vui lòng chờ nhé!</p>
+  <p>Nhà hàng đã nhận được đơn của bạn<br/>và đang chuẩn bị. Vui lòng chờ nhé!</p>
   <div class="order-id-box">
     <span>Mã đơn hàng</span>
     <strong id="successOrderId">------</strong>
@@ -326,16 +326,16 @@
 
 <script>
 const params = new URLSearchParams(location.search);
-const tableId = params.get('table') || 'table_1';
-const socket = io('https://banh-mi-cha-ca-nong.onrender.com');
+const tableId = params.get('table') || 'takeaway';
+// Dùng relative URL — hoạt động cả local lẫn production
+const socket = io();
 
 let menu = [];
 let cart = []; // [{id, name, price, quantity, image}]
 let currentOrderId = null;
 
-// Kết nối socket
-socket.emit('join_table', { tableId });
-document.getElementById('tableBadge').textContent = 'Bàn ' + tableId.replace('table_', '');
+// Hiển thị nhãn Mang đi cố định
+document.getElementById('tableBadge').textContent = 'Mang đi';
 
 // Nhận xác nhận order
 socket.on('order_confirmed', (order) => {
