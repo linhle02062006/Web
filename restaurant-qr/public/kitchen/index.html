@@ -135,6 +135,52 @@
     color: var(--text); padding: 6px 14px; border-radius: 8px;
     font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
   }
+
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    body { height: auto; min-height: 100vh; }
+    
+    .kitchen-header {
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .kitchen-header h1 { font-size: 16px; }
+    .header-stats { width: 100%; justify-content: space-around; }
+    .stat-num { font-size: 18px; }
+    .stat-label { font-size: 10px; }
+    
+    .columns {
+      grid-template-columns: 1fr;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .column {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      min-height: 200px;
+      max-height: 300px;
+    }
+    .col-header { padding: 10px 12px; font-size: 12px; }
+    .col-body { padding: 8px; gap: 8px; }
+    
+    .order-card { border-radius: 10px; }
+    .card-header { padding: 8px 10px; }
+    .card-id { font-size: 14px; }
+    .card-items { padding: 8px 10px; }
+    .oi-emoji { width: 36px; height: 36px; }
+    .oi-name { font-size: 12px; }
+    .item-status-btn { padding: 4px 8px; font-size: 10px; }
+    .card-actions { padding: 8px 10px; }
+    .action-btn { padding: 6px; font-size: 11px; }
+    
+    .empty-col { padding: 20px 10px; }
+    .empty-col .e-icon { font-size: 30px; }
+  }
 </style>
 </head>
 <body>
