@@ -8,7 +8,17 @@ const Database = require('better-sqlite3');
 const ExcelJS = require('exceljs');
 
 // ===================== CẤU HÌNH SQLite =====================
-const dbPath = path.join(__dirname, 'restaurant.db');
+// DATA_DIR: dùng cho Render persistent disk, fallback về thư mục project khi chạy local
+const dataDir = process.env.DATA_DIR || __dirname;
+try {
+  if (!require('fs').existsSync(dataDir)) {
+    require('fs').mkdirSync(dataDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('⚠️ Không tạo được DATA_DIR, fallback về __dirname:', e.message);
+}
+const dbPath = path.join(dataDir, 'restaurant.db');
+console.log('📂 DB path:', dbPath);
 const db = new Database(dbPath);
 
 // Tạo bảng nếu chưa có

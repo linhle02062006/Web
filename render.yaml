@@ -1,0 +1,28 @@
+# Render Blueprint - tự động cấu hình khi bạn "New +" → "Blueprint"
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: restaurant-qr
+    runtime: node
+    plan: free                # đổi sang 'starter' ($7/tháng) nếu muốn có disk persistent
+    region: singapore         # gần Việt Nam nhất (oregon/frankfurt/ohio cũng được)
+    rootDir: restaurant-qr    # thư mục chứa package.json của app
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/menu
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: DATA_DIR
+        value: /var/data      # nơi lưu restaurant.db (mount disk)
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+    # ⚠️ Disk persistent CHỈ có ở plan 'starter' trở lên.
+    # Nếu dùng plan free: dữ liệu SQLite sẽ mất sau mỗi lần deploy / sleep.
+    # Bỏ comment block dưới khi bạn nâng plan:
+    # disk:
+    #   name: data
+    #   mountPath: /var/data
+    #   sizeGB: 1
