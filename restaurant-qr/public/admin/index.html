@@ -385,6 +385,10 @@
 
     <!-- Revenue -->
     <div class="page" id="page-revenue">
+      <div class="section-header">
+        <div class="section-title">💰 Doanh Thu</div>
+        <button class="filter-tab active" onclick="exportExcel()" style="background: var(--green); color: white;">📥 Xuất Excel</button>
+      </div>
       <div class="revenue-cards">
         <div class="rev-card"><div class="rev-label">💰 Doanh thu hôm nay</div><div class="rev-amount" id="revToday">0đ</div></div>
         <div class="rev-card"><div class="rev-label">📋 Đơn đã thanh toán</div><div class="rev-amount" id="revCount">0</div></div>
@@ -585,6 +589,10 @@ function renderRevenue() {
       <td style="color:var(--muted);font-size:12px;">${new Date(o.paidAt||o.createdAt).toLocaleString('vi')}</td>
     </tr>
   `).join('');
+}
+
+function exportExcel() {
+  window.open('/api/export/excel', '_blank');
 }
 
 function showQR(tableId, tableName) {
