@@ -415,7 +415,7 @@
     <nav class="sidebar-nav">
       <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)"><span>📊</span> Dashboard</div>
       <div class="nav-item" data-page="tables" onclick="showPage('tables', this)"><span>📱</span> QR bán hàng</div>
-      <div class="nav-item" data-page="orders" onclick="showPage('orders', this)"><span>📋</span> Đơn hàng<span class="nav-badge" id="pendingBadge"></span></div>
+  <div class="nav-item" data-page="orders" onclick="showPage('orders', this)"><span>📋</span> Đơn hàng<span class="nav-badge" id="pendingBadge"></span></div>
       <div class="nav-item" data-page="menu" onclick="showPage('menu', this)"><span>🍽️</span> Quản lý menu</div>
       <div class="nav-item" data-page="revenue" onclick="showPage('revenue', this)"><span>💰</span> Doanh thu & Lịch sử</div>
     </nav>
@@ -523,6 +523,13 @@
           <label>Đến ngày</label>
           <input type="date" class="form-input" id="filterTo"/>
         </div>
+        <div class="form-group">
+          <label>Lọc theo</label>
+          <select class="form-input" id="filterBy">
+            <option value="createdAt">📅 Ngày tạo đơn</option>
+            <option value="paidAt" selected>💰 Ngày thanh toán</option>
+          </select>
+        </div>
         <div class="form-group" style="flex: 2; min-width: 180px;">
           <label>Tìm kiếm (mã đơn / khách)</label>
           <input type="text" class="form-input" id="filterSearch" placeholder="VD: A1B2C3"/>
@@ -535,7 +542,7 @@
           <button class="preset-btn" data-preset="30" onclick="setPreset('30', this)">30 ngày</button>
           <button class="preset-btn" data-preset="90" onclick="setPreset('90', this)">3 tháng</button>
         </div>
-        <div class="hint">💡 Khoảng lọc tối đa là 3 tháng (92 ngày). Dữ liệu lấy trực tiếp từ database.</div>
+        <div class="hint">💡 Khoảng lọc tối đa là 3 tháng (92 ngày). Chọn "Ngày thanh toán" để xem doanh thu chính xác!</div>
       </div>
 
       <div class="revenue-cards">
@@ -590,6 +597,7 @@ let currentQRTable = null;
 let orderFilter = 'all';
 let historyList = [];
 let currentPreset = 'today';
+let currentFilterBy = 'paidAt';
 
 socket.emit('join_admin');
 
@@ -731,7 +739,7 @@ function flashTitle(msg) {
 }
 
 function escapeHtml(s) {
-  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
 }
 
 /* ========== Dashboard ========== */
@@ -982,7 +990,8 @@ function setPreset(preset, btn) {
 function getFilterRange() {
   const from = document.getElementById('filterFrom').value;
   const to = document.getElementById('filterTo').value;
-  return { from, to };
+  const filterBy = document.getElementById('filterBy').value;
+  return { from, to, filterBy };
 }
 
 function validateRange(from, to) {
@@ -1002,7 +1011,7 @@ function validateRange(from, to) {
 }
 
 async function applyFilter() {
-  const { from, to } = getFilterRange();
+  const { from, to, filterBy } = getFilterRange();
   if (!validateRange(from, to)) return;
   const q = document.getElementById('filterSearch').value.trim();
 
@@ -1012,6 +1021,7 @@ async function applyFilter() {
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     if (q) params.append('q', q);
+    params.append('filterBy', filterBy);
     const res = await fetch('/api/history?' + params.toString());
     if (!res.ok) {
       const err = await res.json();
@@ -1019,6 +1029,7 @@ async function applyFilter() {
       return;
     }
     historyList = await res.json();
+    currentFilterBy = filterBy;
     renderRevenue();
   } catch (err) {
     alert('Lỗi kết nối server: ' + err.message);

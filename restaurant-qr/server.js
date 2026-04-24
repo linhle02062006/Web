@@ -333,22 +333,22 @@ cleanupOldOrders();
 setInterval(cleanupOldOrders, 24 * 60 * 60 * 1000);
 
 // Hàm helper: query orders từ SQLite theo khoảng ngày
-function queryOrdersFromDB({ from, to, status, q }) {
-  let sql = 'SELECT * FROM Orders WHERE 1=1';
+function queryOrdersFromDB({ from, to, status, q, filterBy = 'createdAt' }) {
+  let sql = `SELECT * FROM Orders WHERE 1=1`;
   const params = [];
   if (from) {
-    sql += ' AND createdAt >= ?';
+    sql += ` AND ${filterBy} >= ?`;
     params.push(from);
   }
   if (to) {
-    sql += ' AND createdAt <= ?';
+    sql += ` AND ${filterBy} <= ?`;
     params.push(to);
   }
   if (status && status !== 'all') {
     sql += ' AND status = ?';
     params.push(status);
   }
-  sql += ' ORDER BY createdAt DESC';
+  sql += ` ORDER BY ${filterBy} DESC`;
   let rows = db.prepare(sql).all(...params);
   rows = rows.map(r => {
     try { r.items = JSON.parse(r.items); } catch { r.items = []; }
@@ -368,7 +368,7 @@ function queryOrdersFromDB({ from, to, status, q }) {
 // ===================== API LỊCH SỬ ĐƠN HÀNG (có lọc ngày) =====================
 app.get('/api/history', (req, res) => {
   try {
-    const { from, to, status, q } = req.query;
+    const { from, to, status, q, filterBy = 'createdAt' } = req.query;
     const MAX_DAYS = 92; // ~3 tháng
 
     if (from && to) {
@@ -384,7 +384,7 @@ app.get('/api/history', (req, res) => {
     const fromISO = from ? new Date(from + 'T00:00:00').toISOString() : null;
     const toISO = to ? new Date(to + 'T23:59:59').toISOString() : null;
 
-    const list = queryOrdersFromDB({ from: fromISO, to: toISO, status, q });
+    const list = queryOrdersFromDB({ from: fromISO, to: toISO, status, q, filterBy });
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });
