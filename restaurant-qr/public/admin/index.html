@@ -78,12 +78,39 @@
 <!-- MENU -->
 <div class="page" id="p-menu">
 <div class="aform"><h3>Thêm món mới</h3>
-<div class="frow">
+<div class="frow-upload">
+<div class="frow-fields">
 <div class="fg"><label>Tên món</label><input class="fi" id="nName" placeholder="VD: Phở Bò"/></div>
 <div class="fg"><label>Giá (đ)</label><input class="fi" id="nPrice" type="number" placeholder="65000"/></div>
 <div class="fg"><label>Danh mục</label><select class="fi" id="nCat"></select></div>
-<div class="fg"><label>URL ảnh</label><input class="fi" id="nImg" placeholder="/menu/xxx.jpg"/></div>
-<button class="add-btn" onclick="addItem()">Thêm</button>
+</div>
+<div class="fg img-upload-group">
+<label>Ảnh món</label>
+<div class="img-upload-area" id="imgUploadArea" onclick="document.getElementById('imgFileInput').click()">
+  <div class="img-upload-placeholder" id="imgPlaceholder">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+    <span>Chọn hoặc kéo thả ảnh</span>
+  </div>
+  <img class="img-upload-preview" id="imgPreview" src="" alt="Preview"/>
+</div>
+<div class="img-upload-actions">
+  <button type="button" class="img-btn img-btn-upload" onclick="event.stopPropagation();document.getElementById('imgFileInput').click()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload
+  </button>
+  <button type="button" class="img-btn img-btn-camera" onclick="event.stopPropagation();document.getElementById('imgCameraInput').click()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Chụp ảnh
+  </button>
+  <button type="button" class="img-btn img-btn-remove" id="imgRemoveBtn" onclick="event.stopPropagation();removeImage()" style="display:none">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Xóa ảnh
+  </button>
+</div>
+<input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+<input type="file" id="imgCameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleImageSelect(this)"/>
+</div>
+<button class="add-btn" onclick="addItem()">Thêm món</button>
 </div></div>
 <div class="mg" id="menuGrid"></div>
 </div>

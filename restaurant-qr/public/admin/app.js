@@ -186,7 +186,7 @@ function renderMenu() {
   const grid = document.getElementById('menuGrid');
   if (!menuItems.length) { grid.innerHTML = '<div class="empty">Chưa có món</div>'; return; }
   grid.innerHTML = menuItems.map(item => {
-    const isImg = item.image && (item.image.startsWith('/') || item.image.startsWith('http'));
+    const isImg = item.image && (item.image.startsWith('/') || item.image.startsWith('http') || item.image.startsWith('data:'));
     const imgH = isImg ? `<img src="${esc(item.image)}" onerror="this.style.display='none'">` : `<span style="font-size:14px;color:var(--muted)">No image</span>`;
     return `<div class="mc"><div class="mc-top">
       <div class="mc-img">${imgH}</div>
@@ -198,18 +198,127 @@ function renderMenu() {
   }).join('');
 }
 
+// ===== IMAGE UPLOAD =====
+let pendingImageUrl = '';
+
+// Resize image to fit a square frame using cover-fit (crop to center)
+function resizeImage(file, maxSize = 800) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = maxSize;
+        canvas.height = maxSize;
+        const ctx = canvas.getContext('2d');
+
+        // Cover-fit: crop center of image to fill square
+        const srcW = img.width;
+        const srcH = img.height;
+        const scale = Math.max(maxSize / srcW, maxSize / srcH);
+        const scaledW = srcW * scale;
+        const scaledH = srcH * scale;
+        const offsetX = (maxSize - scaledW) / 2;
+        const offsetY = (maxSize - scaledH) / 2;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, maxSize, maxSize);
+        ctx.drawImage(img, offsetX, offsetY, scaledW, scaledH);
+
+        // Compress to JPEG at 80% quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImageSelect(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  // Reset input so same file can be re-selected
+  const inputId = input.id;
+
+  try {
+    const area = document.getElementById('imgUploadArea');
+    const group = area.closest('.img-upload-group');
+    group.classList.add('img-uploading');
+
+    const resized = await resizeImage(file);
+
+    // Show preview
+    const preview = document.getElementById('imgPreview');
+    preview.src = resized;
+    area.classList.add('has-image');
+    document.getElementById('imgRemoveBtn').style.display = 'inline-flex';
+    group.classList.remove('img-uploading');
+
+    // Upload to server
+    const r = await api('/api/upload', 'POST', { image: resized });
+    if (r.error) throw new Error(r.error);
+    pendingImageUrl = r.url;
+    showToast('Ảnh đã tải lên thành công');
+  } catch (e) {
+    console.error('Upload error:', e);
+    alert('Lỗi tải ảnh: ' + e.message);
+    removeImage();
+    const group = document.getElementById('imgUploadArea').closest('.img-upload-group');
+    group.classList.remove('img-uploading');
+  }
+
+  // Reset file input
+  document.getElementById(inputId).value = '';
+}
+
+function removeImage() {
+  pendingImageUrl = '';
+  const preview = document.getElementById('imgPreview');
+  preview.src = '';
+  document.getElementById('imgUploadArea').classList.remove('has-image');
+  document.getElementById('imgRemoveBtn').style.display = 'none';
+  document.getElementById('imgFileInput').value = '';
+  document.getElementById('imgCameraInput').value = '';
+}
+
+// Drag and drop
+(function initDragDrop() {
+  const area = document.getElementById('imgUploadArea');
+  if (!area) return;
+  ['dragenter', 'dragover'].forEach(evt => {
+    area.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); area.classList.add('drag-over'); });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    area.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); area.classList.remove('drag-over'); });
+  });
+  area.addEventListener('drop', e => {
+    const files = e.dataTransfer?.files;
+    if (files?.length > 0 && files[0].type.startsWith('image/')) {
+      // Create a synthetic input to reuse handleImageSelect
+      const dt = new DataTransfer();
+      dt.items.add(files[0]);
+      document.getElementById('imgFileInput').files = dt.files;
+      handleImageSelect(document.getElementById('imgFileInput'));
+    }
+  });
+})();
+
 async function addItem() {
   const name = document.getElementById('nName').value.trim();
   const price = parseInt(document.getElementById('nPrice').value);
   const cat = document.getElementById('nCat').value;
-  const img = document.getElementById('nImg').value.trim();
+  const img = pendingImageUrl;
   if (!name || !price) { alert('Nhập tên và giá!'); return; }
   try {
     const r = await api('/api/menu', 'POST', { name, price, category: cat, image: img });
     if (r.error) throw new Error(r.error);
     document.getElementById('nName').value = '';
     document.getElementById('nPrice').value = '';
-    document.getElementById('nImg').value = '';
+    removeImage();
     await loadMenu();
   } catch (e) { alert('Lỗi: ' + e.message); }
 }

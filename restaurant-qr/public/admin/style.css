@@ -106,12 +106,35 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 /* Add form */
 .aform{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px}
 .aform h3{font-size:15px;font-weight:700;margin-bottom:12px}
-.frow{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:10px;align-items:end}
+.frow-upload{display:flex;flex-direction:column;gap:14px}
+.frow-fields{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px}
 .fg{display:flex;flex-direction:column;gap:4px}
 .fg label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
 .fi{padding:9px 12px;border-radius:8px;border:1px solid var(--border);font-family:inherit;font-size:14px;outline:none;width:100%;background:var(--surface)}
 .fi:focus{border-color:var(--accent)}
-.add-btn{padding:10px 16px;background:var(--accent);color:#fff;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.add-btn{padding:10px 16px;background:var(--accent);color:#fff;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;align-self:flex-start}
+
+/* Image upload */
+.img-upload-group{width:100%}
+.img-upload-area{width:100%;height:160px;border:2px dashed var(--border);border-radius:12px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:border-color .2s,background .2s;position:relative}
+.img-upload-area:hover{border-color:var(--accent);background:rgba(79,70,229,.04)}
+.img-upload-area.drag-over{border-color:var(--accent);background:rgba(79,70,229,.08);border-style:solid}
+.img-upload-area.has-image{border-style:solid;border-color:var(--accent)}
+.img-upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:16px;text-align:center}
+.img-upload-placeholder svg{opacity:.5}
+.img-upload-preview{width:100%;height:100%;object-fit:cover;display:none}
+.img-upload-area.has-image .img-upload-placeholder{display:none}
+.img-upload-area.has-image .img-upload-preview{display:block}
+.img-upload-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.img-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s}
+.img-btn:hover{border-color:var(--accent);color:var(--accent)}
+.img-btn svg{flex-shrink:0}
+.img-btn-upload:hover{background:var(--accent-l);border-color:var(--accent);color:var(--accent)}
+.img-btn-camera:hover{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
+.img-btn-remove{border-color:var(--red-l);color:var(--red)}
+.img-btn-remove:hover{background:var(--red-l);border-color:var(--red);color:var(--red)}
+.img-uploading .img-upload-area{opacity:.6;pointer-events:none}
+.img-uploading .img-upload-area::after{content:'Đang tải...';position:absolute;font-size:13px;font-weight:600;color:var(--accent)}
 
 /* Revenue */
 .rcards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
@@ -134,7 +157,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
 .hide-sm{}
 
-@media(max-width:1024px){.stats{grid-template-columns:repeat(2,1fr)}.frow{grid-template-columns:1fr 1fr}.frow .add-btn{grid-column:1/-1}}
+@media(max-width:1024px){.stats{grid-template-columns:repeat(2,1fr)}.frow-fields{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){
 :root{--sw:0px}
 .sidebar{width:260px;transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,.15)}
@@ -148,7 +171,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .stat{padding:12px}.stat-num{font-size:18px}
 .mg{grid-template-columns:1fr}
 .rcards{grid-template-columns:1fr}
-.frow{grid-template-columns:1fr}.frow .add-btn{grid-column:1}
+.frow-fields{grid-template-columns:1fr}
 .fbar .fg{min-width:100%}
 .sh{flex-direction:column;align-items:stretch}
 .hide-sm{display:none!important}

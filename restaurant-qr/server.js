@@ -21,7 +21,7 @@ const io = new Server(server);
 const sessions = {};
 
 // Middleware
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -183,6 +183,39 @@ app.post('/api/categories', authMiddleware, async (req, res) => {
   try {
     const result = await db.collection('categories').insertOne({ name, display_order: display_order || 0, is_hidden: false, created_at: new Date() });
     res.json({ success: true, category_id: result.insertedId.toString() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Upload image (stores in MongoDB as base64)
+app.post('/api/upload', authMiddleware, async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image || !image.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid image data' });
+    }
+    // Store image in a separate collection to keep menu_items lightweight
+    const result = await db.collection('images').insertOne({
+      data: image,
+      created_at: new Date()
+    });
+    const imageUrl = `/api/images/${result.insertedId.toString()}`;
+    res.json({ success: true, url: imageUrl });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Serve uploaded images
+app.get('/api/images/:id', async (req, res) => {
+  try {
+    const img = await db.collection('images').findOne({ _id: new ObjectId(req.params.id) });
+    if (!img) return res.status(404).json({ error: 'Image not found' });
+    // Parse data URI: data:image/jpeg;base64,XXXX
+    const matches = img.data.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!matches) return res.status(400).json({ error: 'Invalid image format' });
+    const ext = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    res.set('Content-Type', `image/${ext}`);
+    res.set('Cache-Control', 'public, max-age=31536000');
+    res.send(buffer);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
