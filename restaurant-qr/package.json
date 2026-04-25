@@ -1,7 +1,7 @@
 {
   "name": "restaurant-qr-order",
   "version": "1.0.0",
-  "description": "Restaurant QR - MongoDB/SQLite",
+  "description": "Restaurant QR Order System with MongoDB",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,11 +10,10 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "better-sqlite3": "^9.6.0",
-    "qrcode": "^1.5.3",
-    "uuid": "^9.0.1",
-    "exceljs": "^4.4.0",
-    "mongoose": "^8.3.1"
+    "mongodb": "^6.3.0",
+    "exceljs": "^4.4.0"
   },
-  "engines": {"node": ">=18"}
+  "engines": {
+    "node": ">=18"
+  }
 }
