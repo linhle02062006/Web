@@ -7,7 +7,8 @@ const ExcelJS = require('exceljs');
 
 // Cấu hình từ environment variables
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb+srv://gacool2k6_db_user:h3kL0DjqVhfCm4d3@cluster0.j0ynlz1.mongodb.net/?appName=Cluster0';
+// Ưu tiên: MONGODB_URI (Render) -> MONGO_URI -> default
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb+srv://gacool2k6_db_user:h3kL0DjqVhfCm4d3@cluster0.j0ynlz1.mongodb.net/?appName=Cluster0';
 const DB_NAME = process.env.DB_NAME || 'restaurant_qr';
 
 const app = express();

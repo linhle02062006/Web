@@ -16,7 +16,7 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: MONGODB_URI
-        value: mongodb+srv://gacool2k6_db_user:h3kL0DjqVhfCm4d3@cluster0.j0ynlz1.mongodb.net/?appName=Cluster0
+        value: mongodb+srv://gacool2k6_db_user:h3kL0DjqVhfCm4d3@cluster0.j0ynlz1.mongodb.net/?appName=Cluster0&retryWrites=true&w=majority
       - key: DB_NAME
         value: restaurant_qr
       - key: NPM_CONFIG_PRODUCTION
