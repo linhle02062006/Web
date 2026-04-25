@@ -49,6 +49,9 @@ async function connectDB() {
       console.log(`   Database: ${DB_NAME}`);
       console.log(`   URI: ${MONGO_URI.replace(/\/\/.*:.*@/, '//****:****@')}`);
       
+      // Seed data nếu database trống
+      await seedDataIfEmpty();
+      
       return true;
     } catch (err) {
       retries++;
@@ -66,6 +69,45 @@ async function connectDB() {
 
 // Khởi động kết nối database
 connectDB();
+
+// Seed data nếu database trống
+async function seedDataIfEmpty() {
+  try {
+    const itemCount = await db.collection('menu_items').countDocuments();
+    if (itemCount > 0) {
+      console.log(`   📋 Có ${itemCount} món trong menu`);
+      return;
+    }
+    
+    console.log('   🌱 Đang tạo dữ liệu mẫu...');
+    
+    // Tạo categories
+    const categories = [
+      { name: 'Bánh mì', display_order: 1 },
+      { name: 'Nước uống', display_order: 2 },
+      { name: 'Combo', display_order: 3 }
+    ];
+    await db.collection('categories').insertMany(categories);
+    
+    // Tạo menu items
+    const menuItems = [
+      { name: 'Bánh mì chả cá', price: 25000, category_id: 'Bánh mì', description: 'Bánh mì giòn with chả cá', image: '', display_order: 1 },
+      { name: 'Bánh mì pate', price: 20000, category_id: 'Bánh mì', description: 'Bánh mì with pate', image: '', display_order: 2 },
+      { name: 'Bánh mì xá xíu', price: 30000, category_id: 'Bánh mì', description: 'Bánh mì with xá xíu', image: '', display_order: 3 },
+      { name: 'Bánh mì trứng', price: 18000, category_id: 'Bánh mì', description: 'Bánh mì with trứng', image: '', display_order: 4 },
+      { name: 'Cà phê sữa đá', price: 20000, category_id: 'Nước uống', description: 'Cà phê sữa đá classic', image: '', display_order: 5 },
+      { name: 'Trà đá', price: 15000, category_id: 'Nước uống', description: 'Trà đá mát lạnh', image: '', display_order: 6 },
+      { name: 'Nước cam', price: 25000, category_id: 'Nước uống', description: 'Nước cam tươi', image: '', display_order: 7 },
+      { name: 'Combo 1', price: 45000, category_id: 'Combo', description: 'Bánh mì + Nước', image: '', display_order: 8 },
+      { name: 'Combo 2', price: 55000, category_id: 'Combo', description: 'Bánh mì + Trà', image: '', display_order: 9 }
+    ];
+    
+    await db.collection('menu_items').insertMany(menuItems);
+    console.log('   ✅ Đã tạo 9 món mẫu');
+  } catch (err) {
+    console.log('   ⚠️ Lỗi seed data:', err.message);
+  }
+}
 
 // API: Lấy menu
 app.get('/api/menu', async (req, res) => {

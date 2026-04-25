@@ -331,6 +331,7 @@ const tableId = params.get('table') || 'takeaway';
 const socket = io();
 
 let menu = [];
+let categories = []; // Lưu categories từ server
 let cart = []; // [{id, name, price, quantity, image}]
 let currentOrderId = null;
 
@@ -377,22 +378,36 @@ function updateStatusTracker(status) {
 fetch('/api/menu')
   .then(r => r.json())
   .then(data => {
-    menu = data;
+    // Server trả về { categories, items } - map sang format client cần
+    menu = (data.items || []).map(item => ({
+      id: item._id || item.id,
+      name: item.name,
+      price: item.price,
+      category: item.category_id || 'Khác',
+      image: item.image || '',
+      available: !item.is_hidden
+    }));
     renderCategories();
     renderMenu();
+  })
+  .catch(err => {
+    console.error('Lỗi load menu:', err);
+    document.getElementById('menuSection').innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px;">Không thể tải menu. Vui lòng thử lại sau.</p>';
   });
 
 let activeCategory = 'all';
 
 function renderCategories() {
-  const cats = ['Tất cả', ...new Set(menu.map(m => m.category))];
+  // Ưu tiên categories từ server, fallback sang derived từ menu
+  const catSource = categories.length > 0 ? categories : [...new Set(menu.map(m => m.category))];
+  const cats = ['Tất cả', ...catSource];
   const container = document.getElementById('categories');
   container.innerHTML = '';
   cats.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = c;
-    btn.onclick = () => filterCategory(i === 0 ? 'all' : c, btn);
+    btn.textContent = c === 'all' ? 'Tất cả' : (c.name || c);
+    btn.onclick = () => filterCategory(i === 0 ? 'all' : (c._id || c), btn);
     container.appendChild(btn);
   });
 }
@@ -405,20 +420,33 @@ function filterCategory(cat, btn) {
 }
 
 function renderMenu() {
-  const filtered = activeCategory === 'all' ? menu : menu.filter(m => m.category === activeCategory);
-  const cats = activeCategory === 'all' ? [...new Set(menu.map(m => m.category))] : [activeCategory];
+  // Lọc theo category - hỗ trợ cả id và name
+  let filtered = menu;
+  if (activeCategory !== 'all') {
+    filtered = menu.filter(m => m.category === activeCategory || m.category_id === activeCategory);
+  }
+  
+  // Group theo category
+  const grouped = {};
+  filtered.forEach(item => {
+    const cat = item.category || 'Khác';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+  
   const section = document.getElementById('menuSection');
   section.innerHTML = '';
 
-  cats.forEach(cat => {
-    const items = filtered.filter(m => m.category === cat);
+  Object.keys(grouped).forEach(cat => {
+    const items = grouped[cat];
     if (!items.length) return;
     const div = document.createElement('div');
     div.innerHTML = `<div class="section-title">${cat}</div><div class="menu-grid">${
       items.map(item => {
         const inCart = cart.find(c => c.id === item.id);
-        return `<div class="menu-item ${item.available ? '' : 'unavailable'}" onclick="addToCart(${item.id})">
-          <div class="item-emoji"><img src="${item.image}"></div>
+        const imgSrc = item.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="50">🍽️</text></svg>';
+        return `<div class="menu-item ${item.available ? '' : 'unavailable'}" onclick="addToCart('${item.id}')">
+          <div class="item-emoji"><img src="${imgSrc}" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'50\'>🍽️</text></svg>'"></div>
           ${inCart ? `<div class="in-cart-badge">${inCart.quantity}</div>` : ''}
           <div class="item-info">
             <div class="item-name">${item.name}</div>
@@ -433,9 +461,11 @@ function renderMenu() {
 }
 
 function addToCart(itemId) {
-  const item = menu.find(m => m.id === itemId);
+  // Handle both string and number IDs
+  const id = String(itemId);
+  const item = menu.find(m => String(m.id) === id);
   if (!item) return;
-  const existing = cart.find(c => c.id === itemId);
+  const existing = cart.find(c => String(c.id) === id);
   if (existing) existing.quantity++;
   else cart.push({ ...item, quantity: 1 });
   updateCartUI();
@@ -460,10 +490,12 @@ function updateCartUI() {
 function renderCartItems() {
   const container = document.getElementById('cartItems');
   if (!cart.length) { container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Chưa có món nào</p>'; return; }
-  container.innerHTML = cart.map((item, idx) => `
+  container.innerHTML = cart.map((item, idx) => {
+    const imgSrc = item.image || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="50">🍽️</text></svg>';
+    return `
     <div class="cart-item">
       <div class="ci-emoji">
-      <img src="${item.image}" alt="${item.name}"></div>
+      <img src="${imgSrc}" alt="${item.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'50\'>🍽️</text></svg>'"></div>
       <div class="ci-info">
         <div class="ci-name">${item.name}</div>
         <div class="ci-price">${item.price.toLocaleString('vi')}đ / món</div>
@@ -474,7 +506,7 @@ function renderCartItems() {
         <button class="qty-btn" onclick="changeQty(${idx},1)">+</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function changeQty(idx, delta) {
@@ -498,11 +530,35 @@ function closeCart() {
 function placeOrder() {
   if (!cart.length) return;
   const note = document.getElementById('noteInput').value;
-  socket.emit('place_order', {
-    tableId,
-    items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, image: i.image })),
-    note
+  
+  // Gọi API thay vì socket
+  fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      table_id: tableId,
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+      notes: note
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      currentOrderId = data.order_id;
+      document.getElementById('successOrderId').textContent = data.order_id;
+      document.getElementById('successScreen').classList.add('show');
+      document.getElementById('trackOrderId').textContent = data.order_id;
+      updateStatusTracker('pending');
+      cart = [];
+      updateCartUI();
+    } else {
+      alert('Lỗi: ' + (data.error || 'Không thể đặt món'));
+    }
+  })
+  .catch(err => {
+    alert('Lỗi kết nối: ' + err.message);
   });
+  
   closeCart();
 }
 
