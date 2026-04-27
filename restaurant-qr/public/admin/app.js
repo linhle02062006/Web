@@ -11,13 +11,28 @@ async function checkAuth() {
   if (!token) { showLogin(); return; }
   try {
     const r = await api('/api/auth/check');
-    if (r.authenticated) showApp();
-    else { token = ''; localStorage.removeItem('admin_token'); showLogin(); }
+    if (r.authenticated) { localStorage.setItem('admin_role', r.role); showApp(); }
+    else { token = ''; localStorage.removeItem('admin_token'); localStorage.removeItem('admin_role'); showLogin(); }
   } catch { showLogin(); }
 }
 
 function showLogin() { document.getElementById('loginWrap').style.display = 'flex'; document.getElementById('app').style.display = 'none'; }
-function showApp() { document.getElementById('loginWrap').style.display = 'none'; document.getElementById('app').style.display = 'block'; loadData(); }
+function showApp() { 
+  document.getElementById('loginWrap').style.display = 'none'; 
+  document.getElementById('app').style.display = 'block'; 
+  
+  const role = localStorage.getItem('admin_role');
+  if (role === 'staff') {
+    if(document.getElementById('nav-qr')) document.getElementById('nav-qr').style.display = 'none';
+    if(document.getElementById('nav-menu')) document.getElementById('nav-menu').style.display = 'none';
+    if(document.getElementById('nav-rev')) document.getElementById('nav-rev').style.display = 'none';
+  } else {
+    if(document.getElementById('nav-qr')) document.getElementById('nav-qr').style.display = 'block';
+    if(document.getElementById('nav-menu')) document.getElementById('nav-menu').style.display = 'block';
+    if(document.getElementById('nav-rev')) document.getElementById('nav-rev').style.display = 'block';
+  }
+  loadData(); 
+}
 
 async function doLogin() {
   const u = document.getElementById('loginUser').value.trim();
@@ -27,14 +42,14 @@ async function doLogin() {
   try {
     const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
     const d = await r.json();
-    if (d.success) { token = d.token; localStorage.setItem('admin_token', token); showApp(); }
+    if (d.success) { token = d.token; localStorage.setItem('admin_token', token); localStorage.setItem('admin_role', d.role); showApp(); }
     else { err.textContent = d.error || 'Sai thông tin'; err.style.display = 'block'; }
   } catch (e) { err.textContent = 'Lỗi kết nối'; err.style.display = 'block'; }
 }
 
 async function doLogout() {
   try { await api('/api/auth/logout', 'POST'); } catch {}
-  token = ''; localStorage.removeItem('admin_token'); showLogin();
+  token = ''; localStorage.removeItem('admin_token'); localStorage.removeItem('admin_role'); showLogin();
 }
 
 function api(url, method, body) {
@@ -98,6 +113,7 @@ function fm(n) { return (n || 0).toLocaleString('vi') + 'đ'; }
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 function badge(ps) {
   if (ps === 'paid') return '<span class="badge b-paid">Đã thanh toán</span>';
+  if (ps === 'cancelled') return '<span class="badge b-del" style="background:var(--danger);color:#fff">Đã hủy</span>';
   return '<span class="badge b-unpaid">Chưa thanh toán</span>';
 }
 function shortId(o) { return o.short_id || o._id?.slice(-6) || '---'; }
@@ -137,17 +153,23 @@ function renderOrders() {
   if (!list.length) { body.innerHTML = '<tr><td colspan="7" class="empty">Không có đơn</td></tr>'; return; }
   body.innerHTML = list.map(o => {
     const itemsText = (o.items||[]).map(i => esc(i.name) + '×' + i.quantity).join(', ');
-    return `<tr>
-    <td><strong style="color:var(--accent)">#${esc(shortId(o))}</strong></td>
-    <td class="hide-sm" style="font-size:12px;max-width:180px">${itemsText}</td>
-    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text)">${itemsText}</td>
+    const role = localStorage.getItem('admin_role');
+    const isCancelled = o.payment_status === 'cancelled';
+    const isPaid = o.payment_status === 'paid';
+    return `<tr ${isCancelled ? 'style="background:var(--surface-hover)"' : ''}>
+    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">#${esc(shortId(o))}</strong></td>
+    <td class="hide-sm" style="font-size:12px;max-width:180px;${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">${itemsText}</td>
+    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">${itemsText}</td>
     <td class="hide-sm" style="font-size:12px;color:var(--muted)">${esc(o.notes) || '—'}</td>
-    <td><strong>${fm(o.total)}</strong></td>
-    <td>${badge(o.payment_status)}</td>
+    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}"><strong>${fm(o.total)}</strong></td>
+    <td>${badge(o.payment_status)}
+      ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--danger);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
+    </td>
     <td class="hide-sm" style="color:var(--muted);font-size:12px">${fmtTime(o.created_at)}</td>
     <td style="white-space:nowrap">
-      ${o.payment_status !== 'paid' ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
-      <button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>
+      ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
+      ${!isCancelled ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy đơn</button>` : ''}
+      ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
     </td>
   </tr>`;
   }).join('');
@@ -175,6 +197,32 @@ async function delOrder(id) {
   try {
     await api(`/api/orders/${id}`, 'DELETE');
     orders = orders.filter(o => o._id !== id);
+    renderAll();
+  } catch (e) { alert('Lỗi: ' + e.message); }
+}
+
+let cancelTargetId = null;
+function showCancelModal(id, shortIdStr) {
+  cancelTargetId = id;
+  document.getElementById('cancelOrderIdTxt').textContent = '#' + shortIdStr;
+  document.getElementById('cancelReason').value = '';
+  document.getElementById('cancelModal').classList.add('show');
+}
+function closeCancelModal() {
+  document.getElementById('cancelModal').classList.remove('show');
+  cancelTargetId = null;
+}
+async function submitCancelOrder() {
+  const reason = document.getElementById('cancelReason').value;
+  if (!reason) { alert('Vui lòng chọn lý do hủy đơn!'); return; }
+  try {
+    await api(`/api/orders/${cancelTargetId}/cancel`, 'POST', { reason });
+    const i = orders.findIndex(o => o._id === cancelTargetId);
+    if (i >= 0) {
+      orders[i].payment_status = 'cancelled';
+      orders[i].cancellation_reason = reason;
+    }
+    closeCancelModal();
     renderAll();
   } catch (e) { alert('Lỗi: ' + e.message); }
 }

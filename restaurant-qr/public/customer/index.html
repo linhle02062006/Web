@@ -42,6 +42,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .menu-area{padding:16px}
 .sec-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:24px 0 12px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+@media (min-width:640px){.grid{grid-template-columns:repeat(3,1fr);gap:20px}}
+@media (min-width:1024px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s ease;position:relative;box-shadow:var(--shadow-sm)}
 .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .card:active{transform:scale(.98)}

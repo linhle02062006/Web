@@ -30,10 +30,10 @@
 <div class="s-logo">Nhà Hàng <b>QR</b><button class="s-close" onclick="closeMenu()">&times;</button></div>
 <nav class="s-nav">
 <div class="nav-i active" data-p="dash" onclick="go('dash',this)">Dashboard</div>
-<div class="nav-i" data-p="qr" onclick="go('qr',this)">QR bán hàng</div>
+<div class="nav-i" id="nav-qr" data-p="qr" onclick="go('qr',this)">QR bán hàng</div>
 <div class="nav-i" data-p="orders" onclick="go('orders',this)">Đơn hàng<span class="nav-badge" id="badge"></span></div>
-<div class="nav-i" data-p="menu" onclick="go('menu',this)">Quản lý menu</div>
-<div class="nav-i" data-p="rev" onclick="go('rev',this)">Doanh thu</div>
+<div class="nav-i" id="nav-menu" data-p="menu" onclick="go('menu',this)">Quản lý menu</div>
+<div class="nav-i" id="nav-rev" data-p="rev" onclick="go('rev',this)">Doanh thu</div>
 </nav>
 <div class="s-foot">v2.0 — Hệ Thống Bánh Mì</div>
 </div>
@@ -147,6 +147,22 @@
 <img class="qr-img" id="qrImg" src="" alt="QR"/>
 <div class="qr-url" id="qrUrl"></div>
 <div class="m-acts"><button class="m-btn m-pri" onclick="dlQR()">Tải QR</button><button class="m-btn m-sec" onclick="closeQR()">Đóng</button></div>
+</div></div>
+
+<div class="modal-bg" id="cancelModal"><div class="modal" style="text-align:left">
+<h2 style="font-size:18px;margin-bottom:10px;">Hủy đơn <span id="cancelOrderIdTxt" style="color:var(--accent)"></span></h2>
+<label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px">Lý do hủy đơn *</label>
+<select id="cancelReason" class="fi" style="width:100%;margin-bottom:20px;border:1px solid var(--border)">
+  <option value="" disabled selected>-- Chọn lý do --</option>
+  <option value="Khách đổi ý">Khách đổi ý</option>
+  <option value="Nhập sai món">Nhập sai món</option>
+  <option value="Hết nguyên liệu">Hết nguyên liệu</option>
+  <option value="Khách không đến lấy">Khách không đến lấy</option>
+</select>
+<div class="m-acts" style="justify-content:flex-end">
+  <button class="m-btn m-sec" onclick="closeCancelModal()">Đóng</button>
+  <button class="m-btn" style="background:var(--danger);color:#fff;border:none" onclick="submitCancelOrder()">Xác nhận Hủy</button>
+</div>
 </div></div>
 
 <script src="/admin/app.js"></script>

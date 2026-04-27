@@ -90,8 +90,17 @@ async function ensureAdminUser() {
     const existing = await db.collection('admin_users').findOne({ username: 'admin' });
     if (!existing) {
       const hash = await bcrypt.hash('admin123', 10);
-      await db.collection('admin_users').insertOne({ username: 'admin', password: hash, created_at: new Date() });
+      await db.collection('admin_users').insertOne({ username: 'admin', password: hash, role: 'admin', created_at: new Date() });
       console.log('   🔑 Admin user created (admin/admin123)');
+    } else if (!existing.role) {
+      await db.collection('admin_users').updateOne({ username: 'admin' }, { $set: { role: 'admin' } });
+    }
+    
+    const existingStaff = await db.collection('admin_users').findOne({ username: 'staff' });
+    if (!existingStaff) {
+      const hash = await bcrypt.hash('staff123', 10);
+      await db.collection('admin_users').insertOne({ username: 'staff', password: hash, role: 'staff', created_at: new Date() });
+      console.log('   🔑 Staff user created (staff/staff123)');
     }
   } catch (err) { console.log('   ⚠️ Admin user error:', err.message); }
 }
@@ -133,15 +142,15 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
     }
     const token = crypto.randomBytes(32).toString('hex');
-    sessions[token] = { username: user.username, id: user._id.toString() };
-    res.json({ success: true, token, username: user.username });
+    sessions[token] = { username: user.username, id: user._id.toString(), role: user.role || 'admin' };
+    res.json({ success: true, token, username: user.username, role: user.role || 'admin' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/auth/check', (req, res) => {
   const token = req.headers['x-auth-token'];
   if (token && sessions[token]) {
-    res.json({ authenticated: true, username: sessions[token].username });
+    res.json({ authenticated: true, username: sessions[token].username, role: sessions[token].role });
   } else {
     res.json({ authenticated: false });
   }
@@ -344,10 +353,26 @@ app.patch('/api/orders/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/orders/:id', authMiddleware, async (req, res) => {
   if (!db) return res.status(503).json({ error: 'Database not available' });
+  if (req.adminUser.role === 'staff') return res.status(403).json({ error: 'Staff cannot delete orders' });
   try {
     const result = await db.collection('orders').deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
     io.emit('order-deleted', { _id: req.params.id });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/orders/:id/cancel', authMiddleware, async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not available' });
+  const { reason } = req.body;
+  if (!reason) return res.status(400).json({ error: 'Vui lòng chọn lý do hủy đơn.' });
+  try {
+    const result = await db.collection('orders').updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { payment_status: 'cancelled', cancellation_reason: reason, updated_at: new Date() } }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+    io.emit('order-updated', { _id: req.params.id, payment_status: 'cancelled', cancellation_reason: reason });
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
