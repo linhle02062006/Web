@@ -135,9 +135,12 @@ function renderOrders() {
   if (orderFilter !== 'all') list = orders.filter(o => o.payment_status === orderFilter);
   const body = document.getElementById('ordBody');
   if (!list.length) { body.innerHTML = '<tr><td colspan="7" class="empty">Không có đơn</td></tr>'; return; }
-  body.innerHTML = list.map(o => `<tr>
+  body.innerHTML = list.map(o => {
+    const itemsText = (o.items||[]).map(i => esc(i.name) + '×' + i.quantity).join(', ');
+    return `<tr>
     <td><strong style="color:var(--accent)">#${esc(shortId(o))}</strong></td>
-    <td class="hide-sm" style="font-size:12px;max-width:180px">${(o.items||[]).map(i => esc(i.name) + '×' + i.quantity).join(', ')}</td>
+    <td class="hide-sm" style="font-size:12px;max-width:180px">${itemsText}</td>
+    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text)">${itemsText}</td>
     <td class="hide-sm" style="font-size:12px;color:var(--muted)">${esc(o.notes) || '—'}</td>
     <td><strong>${fm(o.total)}</strong></td>
     <td>${badge(o.payment_status)}</td>
@@ -146,7 +149,8 @@ function renderOrders() {
       ${o.payment_status !== 'paid' ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
       <button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 function fOrd(f, btn) {

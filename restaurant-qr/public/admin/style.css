@@ -1,21 +1,27 @@
 :root {
-    --bg: #f4f5f7;
-    --white: #fff;
-    --surface: #fff;
-    --border: #e5e7eb;
-    --text: #111827;
+    /* Starbucks-inspired warm neutral palette */
+    --bg: #f2f0eb;
+    --white: #ffffff;
+    --surface: #edebe9;
+    --card: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --text: #1e3932;
     --muted: #6b7280;
-    --accent: #4f46e5;
-    --accent-l: #eef2ff;
-    --green: #10b981;
-    --green-l: #d1fae5;
-    --orange: #f59e0b;
-    --orange-l: #fef3c7;
-    --red: #ef4444;
-    --red-l: #fee2e2;
-    --blue: #3b82f6;
-    --blue-l: #dbeafe;
-    --sw: 240px
+    --accent: #006241;
+    --accent-l: #d4e9e2;
+    --green: #00754a;
+    --green-l: #d4e9e2;
+    --orange: #cba258;
+    --orange-l: #faf6ee;
+    --red: #c82014;
+    --red-l: #fce8e6;
+    --blue: #00754a;
+    --blue-l: #d4e9e2;
+    --sw: 240px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --radius: 12px
 }
 
 * {
@@ -37,35 +43,36 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    background: linear-gradient(135deg, #006241 0%, #1e3932 100%);
     padding: 20px
 }
 
 .login-box {
-    background: #fff;
-    border-radius: 20px;
+    background: var(--white);
+    border-radius: var(--radius);
     padding: 40px 32px;
     width: 100%;
     max-width: 380px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, .3)
+    box-shadow: var(--shadow-lg)
 }
 
 .login-box h1 {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 800;
     text-align: center;
-    margin-bottom: 6px
+    margin-bottom: 8px;
+    letter-spacing: -0.16px
 }
 
 .login-box p {
     text-align: center;
     color: var(--muted);
     font-size: 14px;
-    margin-bottom: 24px
+    margin-bottom: 28px
 }
 
 .login-box .fg {
-    margin-bottom: 16px
+    margin-bottom: 18px
 }
 
 .login-box label {
@@ -74,47 +81,52 @@ body {
     font-weight: 700;
     color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 6px
+    letter-spacing: 0.05em;
+    margin-bottom: 8px
 }
 
 .login-box input {
     width: 100%;
-    padding: 12px 14px;
+    padding: 14px 16px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius);
     font-family: inherit;
     font-size: 14px;
     outline: none;
-    transition: border .2s
+    transition: all .2s ease
 }
 
 .login-box input:focus {
-    border-color: var(--accent)
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-l)
 }
 
 .login-btn {
     width: 100%;
-    padding: 14px;
-    background: var(--accent);
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), #1e3932);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius);
     font-family: inherit;
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
-    margin-top: 8px
+    margin-top: 12px;
+    transition: all .2s ease;
+    box-shadow: var(--shadow-md)
 }
 
 .login-btn:hover {
-    background: #4338ca
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg)
 }
 
 .login-err {
     color: var(--red);
     font-size: 13px;
     text-align: center;
-    margin-top: 10px;
+    margin-top: 12px;
     display: none
 }
 
@@ -1009,6 +1021,10 @@ body {
 
 .hide-sm {}
 
+.mobile-col {
+    display: none
+}
+
 @media(max-width:1024px) {
     .stats {
         grid-template-columns: repeat(2, 1fr)
@@ -1094,5 +1110,63 @@ body {
 
     .hide-sm {
         display: none !important
+    }
+
+    .mobile-col {
+        display: block !important
+    }
+
+    .mobile-items {
+        display: block !important;
+        padding: 8px 0;
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.5
+    }
+
+    .mobile-items::before {
+        content: 'Món: ';
+        font-weight: 600;
+        color: var(--muted)
+    }
+
+    #ordBody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--border);
+        gap: 8px
+    }
+
+    #ordBody td {
+        display: block;
+        padding: 4px 0 !important;
+        text-align: left !important
+    }
+
+    #ordBody td:first-child {
+        font-size: 14px
+    }
+
+    #ordBody td:nth-child(4) {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent)
+    }
+
+    #ordBody td:nth-child(5) {
+        margin-top: 4px
+    }
+
+    #ordBody td:last-child {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px
+    }
+
+    #ordBody td:last-child button {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px
     }
 }

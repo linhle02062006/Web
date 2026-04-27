@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>Quản Trị - QR Order</title>
+<title>Quản Trị Cửa Hàng</title>
 <script src="/socket.io/socket.io.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/admin/style.css"/>
@@ -35,7 +35,7 @@
 <div class="nav-i" data-p="menu" onclick="go('menu',this)">Quản lý menu</div>
 <div class="nav-i" data-p="rev" onclick="go('rev',this)">Doanh thu</div>
 </nav>
-<div class="s-foot">v2.0 — Restaurant QR System</div>
+<div class="s-foot">v2.0 — Hệ Thống Bánh Mì</div>
 </div>
 <div class="main">
 <div class="topbar">
@@ -72,7 +72,7 @@
 <button class="ftab" onclick="fOrd('unpaid',this)">Chưa TT</button>
 <button class="ftab" onclick="fOrd('paid',this)">Đã TT</button>
 </div></div>
-<div class="tw"><div class="ts"><table><thead><tr><th>Mã đơn</th><th class="hide-sm">Các món</th><th class="hide-sm">Ghi chú</th><th>Tổng</th><th>Trạng thái</th><th class="hide-sm">Thời gian</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
+<div class="tw"><div class="ts"><table><thead><tr><th>Mã đơn</th><th class="hide-sm">Các món</th><th class="mobile-col">Món & Ghi chú</th><th>Tổng</th><th>Trạng thái</th><th class="hide-sm">Thời gian</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
 </div>
 
 <!-- MENU -->
@@ -80,8 +80,8 @@
 <div class="aform"><h3>Thêm món mới</h3>
 <div class="frow-upload">
 <div class="frow-fields">
-<div class="fg"><label>Tên món</label><input class="fi" id="nName" placeholder="VD: Phở Bò"/></div>
-<div class="fg"><label>Giá (đ)</label><input class="fi" id="nPrice" type="number" placeholder="65000"/></div>
+<div class="fg"><label>Tên món</label><input class="fi" id="nName" placeholder="Bánh mì"/></div>
+<div class="fg"><label>Giá (đ)</label><input class="fi" id="nPrice" type="number" placeholder="15000"/></div>
 <div class="fg"><label>Danh mục</label><select class="fi" id="nCat"></select></div>
 </div>
 <div class="fg img-upload-group">
