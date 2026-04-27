@@ -44,6 +44,11 @@ async function connectDB() {
       console.log('✅ MongoDB connected - DB:', DB_NAME);
       await seedDataIfEmpty();
       await ensureAdminUser();
+      
+      // Cleanup old data (40 days retention)
+      await cleanupOldData();
+      setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
+      
       return true;
     } catch (err) {
       retries++;
@@ -55,6 +60,19 @@ async function connectDB() {
   return false;
 }
 connectDB();
+
+// Delete orders older than 40 days to save space
+async function cleanupOldData() {
+  if (!db) return;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 40);
+  try {
+    const result = await db.collection('orders').deleteMany({ created_at: { $lt: cutoff } });
+    if (result.deletedCount > 0) {
+      console.log(`   🧹 Cleanup: Deleted ${result.deletedCount} orders older than 40 days`);
+    }
+  } catch(e) { console.error('   ⚠️ Cleanup error:', e.message); }
+}
 
 // Seed data
 async function seedDataIfEmpty() {
@@ -405,18 +423,29 @@ app.get('/api/history', async (req, res) => {
   if (!db) return res.status(503).json({ error: 'Database not available' });
   try {
     const { from, to, q, filter } = req.query;
-    let query = {};
+    
+    // Default limit to 40 days to save memory/data
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 40);
+    let query = { created_at: { $gte: cutoff } };
+    
     if (from || to) {
       query.created_at = {};
-      if (from) query.created_at.$gte = new Date(from + 'T00:00:00');
+      if (from) {
+        const fromDate = new Date(from + 'T00:00:00');
+        query.created_at.$gte = fromDate > cutoff ? fromDate : cutoff;
+      } else {
+        query.created_at.$gte = cutoff;
+      }
       if (to) { const end = new Date(to + 'T23:59:59.999'); query.created_at.$lte = end; }
     } else if (filter && filter !== 'all') {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       if (filter === 'today') query.created_at = { $gte: today };
       else if (filter === 'week') { const d = new Date(today); d.setDate(d.getDate()-7); query.created_at = { $gte: d }; }
-      else if (filter === 'month') { const d = new Date(today); d.setMonth(d.getMonth()-1); query.created_at = { $gte: d }; }
+      else if (filter === 'month') { const d = new Date(today); d.setMonth(d.getMonth()-1); query.created_at = { $gte: d > cutoff ? d : cutoff }; }
     }
+    
     if (q) {
       query.$or = [
         { short_id: { $regex: q, $options: 'i' } },
@@ -451,13 +480,24 @@ app.get('/api/export/excel', async (req, res) => {
   if (!db) return res.status(503).json({ error: 'Database not available' });
   try {
     const { start_date, end_date, from, to } = req.query;
-    let query = {};
+    
+    // Default limit to 40 days
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 40);
+    let query = { created_at: { $gte: cutoff } };
+    
     const sd = start_date || from, ed = end_date || to;
     if (sd || ed) {
       query.created_at = {};
-      if (sd) query.created_at.$gte = new Date(sd + 'T00:00:00');
+      if (sd) {
+        const fromDate = new Date(sd + 'T00:00:00');
+        query.created_at.$gte = fromDate > cutoff ? fromDate : cutoff;
+      } else {
+        query.created_at.$gte = cutoff;
+      }
       if (ed) { const end = new Date(ed + 'T23:59:59.999'); query.created_at.$lte = end; }
     }
+    
     const orders = await db.collection('orders').find(query).sort({ created_at: -1 }).toArray();
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Restaurant QR System';
@@ -473,10 +513,22 @@ app.get('/api/export/excel', async (req, res) => {
     sheet1.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
     sheet1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '4472C4' } };
     let stt = 1, totalRevenue = 0;
+    const dateOptions = { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    
     orders.forEach(order => {
-      const ps = order.payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
+      let ps = 'Chưa thanh toán';
+      if (order.payment_status === 'paid') ps = 'Đã thanh toán';
+      if (order.payment_status === 'cancelled') ps = 'Đã hủy';
+      
       if (order.payment_status === 'paid') totalRevenue += order.total || 0;
-      sheet1.addRow({ stt: stt++, short_id: order.short_id || order._id.toString().slice(-6), created_at: order.created_at ? new Date(order.created_at).toLocaleString('vi-VN') : '', total: order.total || 0, payment_status: ps, notes: order.notes || '' });
+      sheet1.addRow({ 
+        stt: stt++, 
+        short_id: order.short_id || order._id.toString().slice(-6), 
+        created_at: order.created_at ? new Date(order.created_at).toLocaleString('vi-VN', dateOptions) : '', 
+        total: order.total || 0, 
+        payment_status: ps, 
+        notes: order.notes || '' 
+      });
     });
     sheet1.addRow({});
     sheet1.addRow({ stt: '', short_id: 'TỔNG DOANH THU', total: totalRevenue });

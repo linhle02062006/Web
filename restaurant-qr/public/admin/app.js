@@ -113,7 +113,7 @@ function fm(n) { return (n || 0).toLocaleString('vi') + 'đ'; }
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 function badge(ps) {
   if (ps === 'paid') return '<span class="badge b-paid">Đã thanh toán</span>';
-  if (ps === 'cancelled') return '<span class="badge b-del" style="background:var(--danger);color:#fff">Đã hủy</span>';
+  if (ps === 'cancelled') return '<span class="badge b-del" style="background:var(--red);color:#fff">Đã hủy</span>';
   return '<span class="badge b-unpaid">Chưa thanh toán</span>';
 }
 function shortId(o) { return o.short_id || o._id?.slice(-6) || '---'; }
@@ -157,13 +157,13 @@ function renderOrders() {
     const isCancelled = o.payment_status === 'cancelled';
     const isPaid = o.payment_status === 'paid';
     return `<tr ${isCancelled ? 'style="background:var(--surface-hover)"' : ''}>
-    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">#${esc(shortId(o))}</strong></td>
-    <td class="hide-sm" style="font-size:12px;max-width:180px;${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">${itemsText}</td>
-    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}">${itemsText}</td>
+    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(shortId(o))}</strong></td>
+    <td class="hide-sm" style="font-size:12px;max-width:180px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
+    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
     <td class="hide-sm" style="font-size:12px;color:var(--muted)">${esc(o.notes) || '—'}</td>
-    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--danger)' : ''}"><strong>${fm(o.total)}</strong></td>
+    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong>${fm(o.total)}</strong></td>
     <td>${badge(o.payment_status)}
-      ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--danger);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
+      ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
     </td>
     <td class="hide-sm" style="color:var(--muted);font-size:12px">${fmtTime(o.created_at)}</td>
     <td style="white-space:nowrap">
