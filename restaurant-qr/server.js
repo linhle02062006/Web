@@ -313,6 +313,7 @@ app.post('/api/orders', async (req, res) => {
       customer_name: customer_name || '',
       items: orderItems, notes: notes || '',
       total, payment_status: 'unpaid',
+      order_status: 'pending',
       created_at: new Date(), updated_at: new Date()
     };
     const result = await db.collection('orders').insertOne(order);
@@ -392,6 +393,56 @@ app.post('/api/orders/:id/cancel', authMiddleware, async (req, res) => {
     if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
     io.emit('order-updated', { _id: req.params.id, payment_status: 'cancelled', cancellation_reason: reason });
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Update order status (pending -> preparing -> ready -> completed)
+app.patch('/api/orders/:id/status', authMiddleware, async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not available' });
+  const { order_status } = req.body;
+  const valid = ['pending', 'preparing', 'ready', 'completed', 'cancelled'];
+  if (!order_status || !valid.includes(order_status)) return res.status(400).json({ error: 'Invalid status' });
+  try {
+    const updateData = { order_status, updated_at: new Date() };
+    if (order_status === 'cancelled') updateData.payment_status = 'cancelled';
+    if (order_status === 'completed') updateData.payment_status = 'paid';
+    const result = await db.collection('orders').updateOne({ _id: new ObjectId(req.params.id) }, { $set: updateData });
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
+    io.emit('order-updated', { _id: req.params.id, order_status, ...updateData });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Top selling products
+app.get('/api/stats/top-products', async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not available' });
+  try {
+    const result = await db.collection('orders').aggregate([
+      { $match: { payment_status: { $ne: 'cancelled' } } },
+      { $unwind: '$items' },
+      { $group: { _id: '$items.name', total_qty: { $sum: '$items.quantity' }, total_revenue: { $sum: '$items.subtotal' } } },
+      { $sort: { total_qty: -1 } },
+      { $limit: 5 }
+    ]).toArray();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Revenue chart (last 7 days)
+app.get('/api/stats/chart', async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Database not available' });
+  try {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+      const next = new Date(d); next.setDate(next.getDate() + 1);
+      const rev = await db.collection('orders').aggregate([
+        { $match: { payment_status: 'paid', created_at: { $gte: d, $lt: next } } },
+        { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } }
+      ]).toArray();
+      days.push({ date: d.toISOString().split('T')[0], revenue: rev[0]?.total || 0, orders: rev[0]?.count || 0 });
+    }
+    res.json(days);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -553,9 +604,10 @@ io.on('connection', (socket) => {
 
 // ==================== ROUTES ====================
 
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/order', (req, res) => res.sendFile(path.join(__dirname, 'public/customer/index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'public/customer/index.html')));
-app.get('/', (req, res) => res.redirect('/admin'));
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err, req, res, next) => { console.error('Server error:', err); res.status(500).json({ error: 'Internal server error' }); });

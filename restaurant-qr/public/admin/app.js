@@ -150,25 +150,29 @@ function renderOrders() {
   let list = orders;
   if (orderFilter !== 'all') list = orders.filter(o => o.payment_status === orderFilter);
   const body = document.getElementById('ordBody');
-  if (!list.length) { body.innerHTML = '<tr><td colspan="7" class="empty">Không có đơn</td></tr>'; return; }
+  if (!list.length) { body.innerHTML = '<tr><td colspan="8" class="empty">Không có đơn</td></tr>'; return; }
   body.innerHTML = list.map(o => {
     const itemsText = (o.items||[]).map(i => esc(i.name) + '×' + i.quantity).join(', ');
     const role = localStorage.getItem('admin_role');
     const isCancelled = o.payment_status === 'cancelled';
     const isPaid = o.payment_status === 'paid';
-    return `<tr ${isCancelled ? 'style="background:var(--surface-hover)"' : ''}>
+    const os = o.order_status || 'pending';
+    const nextStatus = { pending: 'preparing', preparing: 'ready', ready: 'completed' };
+    const nextLabel = { pending: 'Chuẩn bị', preparing: 'Sẵn sàng', ready: 'Hoàn thành' };
+    return `<tr class="${isCancelled ? 'cancelled-row' : ''}">
     <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(shortId(o))}</strong></td>
     <td class="hide-sm" style="font-size:12px;max-width:180px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
     <td class="mobile-items" style="display:none;font-size:11px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
-    <td class="hide-sm" style="font-size:12px;color:var(--muted)">${esc(o.notes) || '—'}</td>
     <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong>${fm(o.total)}</strong></td>
     <td>${badge(o.payment_status)}
       ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
     </td>
+    <td>${typeof orderStatusBadge === 'function' ? orderStatusBadge(os) : ''}</td>
     <td class="hide-sm" style="color:var(--muted);font-size:12px">${fmtTime(o.created_at)}</td>
     <td style="white-space:nowrap">
+      ${(nextStatus[os] && !isCancelled) ? `<button class="btn-sm btn-status" onclick="updateOrderStatus('${o._id}','${nextStatus[os]}')">${nextLabel[os]}</button> ` : ''}
       ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
-      ${!isCancelled ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy đơn</button>` : ''}
+      ${!isCancelled ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy</button>` : ''}
       ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
     </td>
   </tr>`;
@@ -488,3 +492,121 @@ function notifyNew(o) {
 
 document.getElementById('fQ')?.addEventListener('keypress', e => { if (e.key === 'Enter') applyF(); });
 document.getElementById('loginPass')?.addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+
+// ===== DASHBOARD EXTRAS =====
+async function loadTopProducts() {
+  try {
+    const el = document.getElementById('topList');
+    if (!el) return;
+    const data = await fetch('/api/stats/top-products').then(r => r.json());
+    if (!data.length) { el.innerHTML = '<div class="loading-sm">Chưa có dữ liệu</div>'; return; }
+    el.innerHTML = data.map((p, i) => `<div class="top-item">
+      <div class="top-rank">${i + 1}</div>
+      <div class="top-info"><div class="top-name">${esc(p._id)}</div><div class="top-qty">${p.total_qty} phần</div></div>
+      <div class="top-rev">${fm(p.total_revenue)}</div>
+    </div>`).join('');
+  } catch { }
+}
+
+async function loadChart() {
+  try {
+    const canvas = document.getElementById('chartCanvas');
+    if (!canvas) return;
+    const data = await fetch('/api/stats/chart').then(r => r.json());
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.clientWidth - 32;
+    const H = 180;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+    if (!data.length) return;
+    const max = Math.max(...data.map(d => d.revenue), 1);
+    const barW = Math.min(40, (W - 60) / data.length - 8);
+    const startX = 50;
+    // Grid lines
+    ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = H - 30 - (i / 4) * (H - 50);
+      ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(W, y); ctx.stroke();
+      ctx.fillStyle = '#999'; ctx.font = '10px Inter';
+      ctx.fillText(((max * i / 4) / 1000).toFixed(0) + 'k', 2, y + 4);
+    }
+    // Bars
+    data.forEach((d, i) => {
+      const x = startX + i * ((W - startX) / data.length) + ((W - startX) / data.length - barW) / 2;
+      const h = (d.revenue / max) * (H - 50);
+      const y = H - 30 - h;
+      const grad = ctx.createLinearGradient(x, y, x, H - 30);
+      grad.addColorStop(0, '#006241'); grad.addColorStop(1, '#00754a');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.roundRect(x, y, barW, h, [4, 4, 0, 0]); ctx.fill();
+      // Label
+      ctx.fillStyle = '#666'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+      ctx.fillText(d.date.slice(5), x + barW / 2, H - 14);
+      if (d.revenue > 0) {
+        ctx.fillStyle = '#006241'; ctx.font = 'bold 10px Inter';
+        ctx.fillText((d.revenue / 1000).toFixed(0) + 'k', x + barW / 2, y - 6);
+      }
+    });
+  } catch { }
+}
+
+function renderStatusSummary() {
+  const el = document.getElementById('statusSummary');
+  if (!el) return;
+  const counts = { pending: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };
+  orders.forEach(o => { const s = o.order_status || 'pending'; if (counts[s] !== undefined) counts[s]++; });
+  const labels = { pending: 'Chờ xử lý', preparing: 'Đang chuẩn bị', ready: 'Sẵn sàng', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+  const colors = { pending: '#ea580c', preparing: '#2563eb', ready: '#16a34a', completed: '#00754a', cancelled: '#c82014' };
+  el.innerHTML = Object.keys(counts).map(k => `<div class="status-row">
+    <div class="status-row-left"><div class="status-dot" style="background:${colors[k]}"></div><span>${labels[k]}</span></div>
+    <div class="status-row-count">${counts[k]}</div>
+  </div>`).join('');
+}
+
+function orderStatusBadge(s) {
+  const map = { pending: 'b-pending', preparing: 'b-preparing', ready: 'b-ready', completed: 'b-completed', cancelled: 'b-cancelled' };
+  const labels = { pending: 'Chờ xử lý', preparing: 'Đang chuẩn bị', ready: 'Sẵn sàng', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+  const cls = map[s] || 'b-pending';
+  return `<span class="badge ${cls}">${labels[s] || 'Chờ xử lý'}</span>`;
+}
+
+async function updateOrderStatus(id, status) {
+  try {
+    await api(`/api/orders/${id}/status`, 'PATCH', { order_status: status });
+    const i = orders.findIndex(o => o._id === id);
+    if (i >= 0) {
+      orders[i].order_status = status;
+      if (status === 'completed') orders[i].payment_status = 'paid';
+      if (status === 'cancelled') orders[i].payment_status = 'cancelled';
+    }
+    renderAll();
+    showToast('Cập nhật trạng thái thành công');
+  } catch (e) { alert('Lỗi: ' + e.message); }
+}
+
+// Confirm dialog
+let _confirmCb = null;
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  _confirmCb = cb;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeConfirm() { document.getElementById('confirmModal').classList.remove('show'); _confirmCb = null; }
+function confirmAction() { if (_confirmCb) _confirmCb(); closeConfirm(); }
+
+// Override loadData to also load extras
+const _origLoadData = loadData;
+loadData = async function() {
+  await _origLoadData();
+  loadTopProducts();
+  loadChart();
+  renderStatusSummary();
+  const role = localStorage.getItem('admin_role');
+  const uEl = document.getElementById('sUser');
+  if (uEl) uEl.textContent = role === 'admin' ? 'Admin' : 'Staff';
+};
+
+// Override renderAll to include status summary
+const _origRenderAll = renderAll;
+renderAll = function() { _origRenderAll(); renderStatusSummary(); };

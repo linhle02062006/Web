@@ -3,123 +3,135 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Đặt Món - Bánh Mì QR</title>
-<meta name="description" content="Đặt món trực tuyến qua QR code"/>
+<title>Đặt Món - Bánh Mì Kim Phát</title>
+<meta name="description" content="Đặt món trực tuyến Bánh Mì Kim Phát - Nhanh chóng, tiện lợi"/>
 <script src="/socket.io/socket.io.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  /* Starbucks-inspired warm neutral palette */
-  --bg:#f2f0eb;
-  --surface:#edebe9;
-  --card:#ffffff;
-  --accent:#006241;
-  --accent2:#00754a;
-  --text:#1e3932;
-  --muted:#6b7280;
-  --green:#34d399;
-  --red:#c82014;
-  --border:rgba(0,0,0,0.08);
-  --radius:12px;
-  --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg:0 8px 24px rgba(0,0,0,0.12)
-}
+:root{--bg:#f7f4ee;--surface:#efece5;--card:#fff;--accent:#006241;--accent2:#00754a;--text:#1e3932;--muted:#7c6f5b;--green:#34d399;--red:#c82014;--gold:#cba258;--border:rgba(0,0,0,.07);--radius:14px;--shadow-sm:0 1px 3px rgba(0,0,0,.05);--shadow-md:0 4px 16px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.12)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
 ::-webkit-scrollbar{width:0;height:0}
 
-.header{background:linear-gradient(135deg,#006241 0%,#1e3932 100%);padding:18px 20px 14px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md)}
-.header-row{display:flex;justify-content:space-between;align-items:center}
-.brand{font-size:18px;font-weight:800;letter-spacing:-0.16px}
-.table-pill{background:rgba(255,255,255,.18);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700}
+.header{background:linear-gradient(135deg,#006241 0%,#1e3932 100%);padding:0;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md)}
+.header-inner{padding:16px 20px 14px;display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-name{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.6);font-weight:500}
+.header-right{display:flex;align-items:center;gap:10px}
+.home-link{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;text-decoration:none;padding:6px 14px;border:1px solid rgba(255,255,255,.2);border-radius:20px;transition:.2s}
+.home-link:hover{background:rgba(255,255,255,.1);color:#fff}
+.table-pill{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff}
 
 .cats{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:99;box-shadow:var(--shadow-sm)}
-.cat-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:50px;font-family:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .2s ease}
-.cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.cat-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:50px;font-family:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .25s}
+.cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,98,65,.25)}
 .cat-btn:hover:not(.active){border-color:var(--accent);color:var(--accent)}
 
-.menu-area{padding:16px}
-.sec-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:24px 0 12px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
-@media (min-width:640px){.grid{grid-template-columns:repeat(3,1fr);gap:20px}}
-@media (min-width:1024px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s ease;position:relative;box-shadow:var(--shadow-sm)}
-.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
-.card:active{transform:scale(.98)}
-.card-img{width:100%;height:120px;background:linear-gradient(135deg,#edebe9,#e5e3df);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.card-img img{width:100%;height:100%;object-fit:cover}
-.card-img .placeholder-icon{font-size:14px;color:rgba(0,0,0,0.25);font-weight:600}
-.card-body{padding:12px 14px 14px}
-.card-name{font-size:14px;font-weight:600;line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
-.card-price{font-size:16px;font-weight:800;color:var(--accent)}
-.card-plus{position:absolute;bottom:12px;right:12px;width:32px;height:32px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;line-height:32px;text-align:center;cursor:pointer;box-shadow:var(--shadow-md);transition:all .2s ease}
-.card-plus:hover{background:var(--accent2);transform:scale(1.1)}
-.card-plus:active{transform:scale(1.05)}
-.card-qty{position:absolute;top:8px;right:8px;background:var(--accent2);color:#fff;font-size:11px;font-weight:700;min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.menu-area{padding:16px;padding-bottom:100px}
+.sec-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:20px 0 12px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px}
+@media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr);gap:18px}}
+@media(min-width:1024px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
 
-.cart-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--border);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.1)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .25s;position:relative;box-shadow:var(--shadow-sm)}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.card:active{transform:scale(.97)}
+.card-img{width:100%;height:130px;background:linear-gradient(135deg,var(--surface),#e8e4dc);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.card-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.card:hover .card-img img{transform:scale(1.06)}
+.card-img .placeholder-icon{font-size:14px;opacity:.3;font-weight:700;color:var(--muted);letter-spacing:1px}
+.card-body{padding:12px 14px 14px}
+.card-name{font-size:14px;font-weight:700;line-height:1.35;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
+.card-bottom{display:flex;justify-content:space-between;align-items:center}
+.card-price{font-size:16px;font-weight:800;color:var(--accent)}
+.card-plus{width:34px;height:34px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:20px;line-height:34px;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,98,65,.3);transition:all .2s;display:flex;align-items:center;justify-content:center}
+.card-plus:hover{background:var(--accent2);transform:scale(1.1)}
+.card-qty{position:absolute;top:8px;right:8px;background:var(--accent2);color:#fff;font-size:11px;font-weight:700;min-width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.2);animation:popIn .3s}
+
+@keyframes popIn{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+.cart-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--border);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:200;box-shadow:0 -4px 24px rgba(0,0,0,.1)}
 .cart-bar.show{transform:translateY(0)}
-.cart-main-btn{width:100%;padding:14px 18px;background:linear-gradient(135deg,var(--accent),#1e3932);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow-md)}
-.cart-bubble{background:#fff;color:var(--accent);width:26px;height:26px;border-radius:50%;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.cart-main-btn{width:100%;padding:15px 20px;background:linear-gradient(135deg,var(--accent),#1e3932);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow-md);transition:transform .2s}
+.cart-main-btn:active{transform:scale(.98)}
+.cart-bubble{background:#fff;color:var(--accent);width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}
 
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.show{opacity:1;pointer-events:all}
 
-.drawer{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;z-index:400;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);padding-bottom:env(safe-area-inset-bottom,16px);box-shadow:0 -8px 40px rgba(0,0,0,0.15)}
+.drawer{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;z-index:400;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);padding-bottom:env(safe-area-inset-bottom,16px);box-shadow:0 -8px 40px rgba(0,0,0,.15)}
 .drawer.open{transform:translateY(0)}
-.drawer-bar{width:40px;height:4px;background:rgba(0,0,0,0.15);border-radius:2px;margin:12px auto 0}
-.drawer-head{padding:16px 20px;border-bottom:1px solid var(--border)}
+.drawer-bar{width:40px;height:4px;background:rgba(0,0,0,.12);border-radius:2px;margin:12px auto 0}
+.drawer-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .drawer-head h2{font-size:18px;font-weight:800}
+.drawer-clear{background:none;border:none;color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .drawer-items{padding:8px 20px}
 .d-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
 .d-item-img{width:56px;height:56px;border-radius:12px;overflow:hidden;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .d-item-img img{width:100%;height:100%;object-fit:cover}
 .d-item-info{flex:1;min-width:0}
 .d-item-name{font-size:15px;font-weight:600}
-.d-item-price{font-size:13px;color:var(--muted)}
+.d-item-price{font-size:13px;color:var(--muted);margin-top:2px}
 .qty-ctrl{display:flex;align-items:center;gap:8px}
-.qty-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease}
+.qty-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .qty-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
 .qty-num{font-size:15px;font-weight:700;min-width:20px;text-align:center}
-.note-box{margin:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm)}
-.note-box label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px}
-.note-box textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:14px;resize:none;outline:none;min-height:60px}
+.note-box{margin:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.note-box label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px}
+.note-box textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:14px;resize:none;outline:none;min-height:50px}
 .drawer-footer{padding:16px 20px}
 .total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .total-label{font-size:15px;color:var(--muted);font-weight:600}
 .total-val{font-size:24px;font-weight:800;color:var(--accent2)}
-.order-btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#1e3932);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md);letter-spacing:0;transition:all .2s ease}
+.order-btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#1e3932);border:none;border-radius:var(--radius);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .order-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
-.order-btn:active{transform:scale(0.98)}
+.order-btn:active{transform:scale(.98)}
+.order-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.order-btn .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 .success{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 .success.show{display:flex}
-.success h2{font-size:26px;font-weight:800;margin-bottom:12px;color:var(--text)}
+.success-icon{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:popIn .5s}
+.success h2{font-size:26px;font-weight:800;margin-bottom:12px}
 .success p{color:var(--muted);font-size:15px;line-height:1.6}
-.oid-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 32px;margin:24px 0;box-shadow:var(--shadow-md)}
+.oid-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 36px;margin:24px 0;box-shadow:var(--shadow-md)}
 .oid-box span{color:var(--muted);font-size:12px;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
 .oid-box strong{font-size:32px;font-weight:800;color:var(--accent);letter-spacing:2px}
-.back-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:14px 32px;border-radius:var(--radius);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px;box-shadow:var(--shadow-sm);transition:all .2s ease}
+.back-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:14px 32px;border-radius:var(--radius);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px;box-shadow:var(--shadow-sm);transition:all .2s}
 .back-btn:hover{background:var(--surface)}
+.home-back{background:none;border:none;color:var(--accent);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;text-decoration:underline}
 
-.pb-safe{padding-bottom:90px}
-.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:14px}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:14px;gap:12px}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty-state p{font-size:14px}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-row">
-    <div class="brand">Bánh mì QR Order</div>
-    <div class="table-pill" id="tablePill">Mang đi</div>
+  <div class="header-inner">
+    <div class="brand">
+      <div>
+        <div class="brand-name">Bánh Mì Kim Phát</div>
+        <div class="brand-sub">Đặt món trực tuyến</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <a href="/" class="home-link">← Trang chủ</a>
+      <div class="table-pill" id="tablePill">Mang đi</div>
+    </div>
   </div>
 </div>
 
 <div class="cats" id="cats"></div>
 
-<div class="menu-area pb-safe" id="menuArea">
-  <div class="loading">Đang tải menu...</div>
+<div class="menu-area" id="menuArea">
+  <div class="loading"><div class="loading-spinner"></div>Đang tải menu...</div>
 </div>
 
 <div class="cart-bar" id="cartBar">
@@ -136,10 +148,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 <div class="drawer" id="drawer">
   <div class="drawer-bar"></div>
-  <div class="drawer-head"><h2>Giỏ hàng</h2></div>
+  <div class="drawer-head">
+    <h2>Giỏ hàng</h2>
+    <button class="drawer-clear" onclick="clearCart()">Xóa tất cả</button>
+  </div>
   <div class="drawer-items" id="drawerItems"></div>
   <div class="note-box">
-    <label>Ghi chú</label>
+    <label>Ghi chú cho quán</label>
     <textarea id="noteInput" placeholder="Ít cay, không hành, thêm đá..."></textarea>
   </div>
   <div class="drawer-footer">
@@ -147,19 +162,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       <span class="total-label">Tổng cộng</span>
       <span class="total-val" id="drawerTotal">0đ</span>
     </div>
-    <button class="order-btn" onclick="placeOrder()">ĐẶT MÓN NGAY</button>
+    <button class="order-btn" id="orderBtn" onclick="placeOrder()">ĐẶT MÓN NGAY</button>
   </div>
 </div>
 
 <div class="success" id="successScreen">
-  <div class="success-icon" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;margin-bottom:16px;animation:pop .5s"><svg width="36" height="36" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+  <div class="success-icon"><svg width="36" height="36" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
   <h2>Đặt món thành công!</h2>
-  <p>Nhà hàng đã nhận đơn của bạn<br/>và đang chuẩn bị. Vui lòng chờ!</p>
+  <p>Quán đã nhận đơn của bạn<br/>và đang chuẩn bị. Vui lòng chờ!</p>
   <div class="oid-box">
     <span>Mã đơn hàng</span>
     <strong id="successOID">---</strong>
   </div>
-  <button class="back-btn" onclick="backToMenu()">Quay lại menu</button>
+  <button class="back-btn" onclick="backToMenu()">Đặt thêm món khác</button>
+  <button class="home-back" onclick="location.href='/'">← Về trang chủ</button>
 </div>
 
 <script>
@@ -188,7 +204,7 @@ fetch('/api/menu')
     renderMenu();
   })
   .catch(() => {
-    document.getElementById('menuArea').innerHTML = '<div class="loading">Không thể tải menu</div>';
+    document.getElementById('menuArea').innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:14px;color:#999">!</div><p>Không thể tải menu. Vui lòng thử lại.</p></div>';
   });
 
 socket.on('menu-updated', () => {
@@ -206,7 +222,6 @@ socket.on('menu-updated', () => {
 
 function renderCats() {
   const el = document.getElementById('cats');
-  // Remove duplicate categories using Set
   const uniqueCats = [...new Set(cats)];
   const all = ['Tất cả', ...uniqueCats];
   el.innerHTML = all.map((c, i) =>
@@ -233,9 +248,8 @@ function renderMenu() {
   });
 
   const area = document.getElementById('menuArea');
-  if (!filtered.length) { area.innerHTML = '<div class="loading">Không có món nào</div>'; return; }
+  if (!filtered.length) { area.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:14px;color:#999">Trống</div><p>Không có món nào trong danh mục này</p></div>'; return; }
 
-  // Sort categories to ensure consistent order
   const sortedCats = Object.keys(grouped).sort();
   
   area.innerHTML = sortedCats.map(cat => {
@@ -244,16 +258,18 @@ function renderMenu() {
     <div class="grid">${items.map(item => {
       const inCart = cart.find(c => c.id === item.id);
       const imgHtml = item.image
-        ? `<img src="${esc(item.image)}" alt="${esc(item.name)}" onerror="this.parentElement.innerHTML='<div class=placeholder-icon>No image</div>'">`
-        : `<div class="placeholder-icon">No image</div>`;
+        ? `<img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=placeholder-icon>BM</div>'">`
+        : `<div class="placeholder-icon">BM</div>`;
       return `<div class="card" onclick="addToCart('${item.id}')">
         <div class="card-img">${imgHtml}</div>
         ${inCart ? `<div class="card-qty">${inCart.quantity}</div>` : ''}
         <div class="card-body">
           <div class="card-name">${esc(item.name)}</div>
-          <div class="card-price">${fmt(item.price)}</div>
+          <div class="card-bottom">
+            <div class="card-price">${fmt(item.price)}</div>
+            <button class="card-plus" onclick="event.stopPropagation();addToCart('${item.id}')">+</button>
+          </div>
         </div>
-        <button class="card-plus">+</button>
       </div>`;
     }).join('')}</div>`;
   }).join('');
@@ -268,6 +284,14 @@ function addToCart(id) {
   renderMenu();
 }
 
+function clearCart() {
+  if (!cart.length) return;
+  cart = [];
+  updateCartUI();
+  renderMenu();
+  closeCart();
+}
+
 function updateCartUI() {
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const count = cart.reduce((s, i) => s + i.quantity, 0);
@@ -280,11 +304,11 @@ function updateCartUI() {
 
 function renderDrawerItems() {
   const el = document.getElementById('drawerItems');
-  if (!cart.length) { el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">Chưa có món nào</p>'; return; }
+  if (!cart.length) { el.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-icon" style="font-size:14px;color:#999">Trống</div><p>Chưa có món nào trong giỏ</p></div>'; return; }
   el.innerHTML = cart.map((item, i) => {
     const imgHtml = item.image
       ? `<img src="${esc(item.image)}" onerror="this.style.display='none'">`
-      : '<span style="font-size:24px;opacity:.4">🍽️</span>';
+      : '<span style="font-size:11px;opacity:.4;color:#999">No img</span>';
     return `<div class="d-item">
       <div class="d-item-img">${imgHtml}</div>
       <div class="d-item-info">
@@ -316,8 +340,13 @@ function closeCart() {
   document.getElementById('overlay').classList.remove('show');
 }
 
+let ordering = false;
 function placeOrder() {
-  if (!cart.length) return;
+  if (!cart.length || ordering) return;
+  ordering = true;
+  const btn = document.getElementById('orderBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Đang đặt món...';
   const note = document.getElementById('noteInput').value;
   fetch('/api/orders', {
     method: 'POST',
@@ -330,6 +359,9 @@ function placeOrder() {
   })
   .then(r => r.json())
   .then(data => {
+    ordering = false;
+    btn.disabled = false;
+    btn.innerHTML = 'ĐẶT MÓN NGAY';
     if (data.success) {
       document.getElementById('successOID').textContent = data.order_id;
       document.getElementById('successScreen').classList.add('show');
@@ -338,7 +370,7 @@ function placeOrder() {
       document.getElementById('noteInput').value = '';
     } else { alert('Lỗi: ' + (data.error || 'Không thể đặt món')); }
   })
-  .catch(err => alert('Lỗi kết nối: ' + err.message));
+  .catch(err => { ordering = false; btn.disabled = false; btn.innerHTML = 'ĐẶT MÓN NGAY'; alert('Lỗi kết nối: ' + err.message); });
   closeCart();
 }
 

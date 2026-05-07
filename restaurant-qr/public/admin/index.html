@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>Quản Trị Cửa Hàng</title>
+<title>Quản Trị - Bánh Mì Kim Phát</title>
 <script src="/socket.io/socket.io.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/admin/style.css"/>
@@ -13,8 +13,9 @@
 <!-- LOGIN -->
 <div class="login-wrap" id="loginWrap">
 <div class="login-box">
-<h1>Đăng nhập</h1>
-<p>Nhập thông tin để truy cập quản trị</p>
+<div class="login-logo"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="900" stroke="none">KP</text></svg></div>
+<h1>Bánh Mì Kim Phát</h1>
+<p>Đăng nhập hệ thống quản trị</p>
 <div class="fg"><label>Tên đăng nhập</label><input id="loginUser" placeholder="admin"/></div>
 <div class="fg"><label>Mật khẩu</label><input id="loginPass" type="password" placeholder="••••••"/></div>
 <button class="login-btn" onclick="doLogin()">Đăng nhập</button>
@@ -27,19 +28,25 @@
 <div class="s-overlay" id="sOverlay" onclick="closeMenu()"></div>
 <div class="layout">
 <div class="sidebar" id="sidebar">
-<div class="s-logo">Nhà Hàng <b>QR</b><button class="s-close" onclick="closeMenu()">&times;</button></div>
+<div class="s-logo">
+  <div class="s-logo-text"><span class="s-logo-icon">KP</span> Kim Phát</div>
+  <button class="s-close" onclick="closeMenu()">&times;</button>
+</div>
 <nav class="s-nav">
-<div class="nav-i active" data-p="dash" onclick="go('dash',this)">Dashboard</div>
-<div class="nav-i" id="nav-qr" data-p="qr" onclick="go('qr',this)">QR bán hàng</div>
-<div class="nav-i" data-p="orders" onclick="go('orders',this)">Đơn hàng<span class="nav-badge" id="badge"></span></div>
-<div class="nav-i" id="nav-menu" data-p="menu" onclick="go('menu',this)">Quản lý menu</div>
-<div class="nav-i" id="nav-rev" data-p="rev" onclick="go('rev',this)">Doanh thu</div>
+<div class="nav-i active" data-p="dash" onclick="go('dash',this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</div>
+<div class="nav-i" data-p="orders" onclick="go('orders',this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg> Đơn hàng<span class="nav-badge" id="badge"></span></div>
+<div class="nav-i" id="nav-qr" data-p="qr" onclick="go('qr',this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z"/><path d="M20 14v7h-7"/></svg> QR bán hàng</div>
+<div class="nav-i" id="nav-menu" data-p="menu" onclick="go('menu',this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Quản lý menu</div>
+<div class="nav-i" id="nav-rev" data-p="rev" onclick="go('rev',this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Doanh thu</div>
 </nav>
-<div class="s-foot">v2.0 — Hệ Thống Bánh Mì</div>
+<div class="s-foot">
+  <div class="s-user" id="sUser">Admin</div>
+  v3.0 — Bánh Mì Kim Phát
+</div>
 </div>
 <div class="main">
 <div class="topbar">
-<div class="topbar-l"><button class="mob-btn" onclick="toggleMenu()">=</button><h1 id="pageTitle">Dashboard</h1></div>
+<div class="topbar-l"><button class="mob-btn" onclick="toggleMenu()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><h1 id="pageTitle">Dashboard</h1></div>
 <div style="display:flex;gap:8px;align-items:center">
 <div class="conn"><div class="dot"></div><span id="connTxt">Kết nối...</span></div>
 <button class="logout-btn" onclick="doLogout()">Đăng xuất</button>
@@ -49,14 +56,39 @@
 <!-- DASHBOARD -->
 <div class="page active" id="p-dash">
 <div class="stats">
-<div class="stat"><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Đơn hôm nay</div></div>
-<div class="stat"><div class="stat-num" id="sUnpaid">0</div><div class="stat-lbl">Chưa thanh toán</div></div>
-<div class="stat"><div class="stat-num" id="sPaid">0</div><div class="stat-lbl">Đã thanh toán</div></div>
-<div class="stat"><div class="stat-num" id="sRev">0đ</div><div class="stat-lbl">Doanh thu hôm nay</div></div>
+<div class="stat stat-blue"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div><div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Đơn hôm nay</div></div></div>
+<div class="stat stat-orange"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="stat-num" id="sUnpaid">0</div><div class="stat-lbl">Chưa thanh toán</div></div></div>
+<div class="stat stat-green"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div><div><div class="stat-num" id="sPaid">0</div><div class="stat-lbl">Đã thanh toán</div></div></div>
+<div class="stat stat-gold"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div><div class="stat-num" id="sRev">0đ</div><div class="stat-lbl">Doanh thu hôm nay</div></div></div>
 </div>
-<div class="tw"><div class="tw-head">Đơn hàng gần đây</div>
+
+<div class="dash-grid">
+<div class="dash-col">
+<!-- Chart -->
+<div class="tw" id="chartWrap">
+<div class="tw-head">Doanh thu 7 ngày qua</div>
+<div class="chart-container"><canvas id="chartCanvas" height="200"></canvas></div>
+</div>
+<!-- Recent orders -->
+<div class="tw">
+<div class="tw-head">Đơn hàng gần đây</div>
 <div class="ts"><table><thead><tr><th>Mã đơn</th><th>Tổng tiền</th><th>Trạng thái</th><th class="hide-sm">Thời gian</th><th>Thao tác</th></tr></thead><tbody id="dashBody"></tbody></table></div>
-</div></div>
+</div>
+</div>
+<div class="dash-side">
+<!-- Top products -->
+<div class="tw" id="topWrap">
+<div class="tw-head">Sản phẩm bán chạy</div>
+<div class="top-list" id="topList"><div class="loading-sm">Đang tải...</div></div>
+</div>
+<!-- Order status summary -->
+<div class="tw">
+<div class="tw-head">Trạng thái đơn</div>
+<div class="status-summary" id="statusSummary"></div>
+</div>
+</div>
+</div>
+</div>
 
 <!-- QR -->
 <div class="page" id="p-qr">
@@ -71,8 +103,9 @@
 <button class="ftab active" onclick="fOrd('all',this)">Tất cả</button>
 <button class="ftab" onclick="fOrd('unpaid',this)">Chưa TT</button>
 <button class="ftab" onclick="fOrd('paid',this)">Đã TT</button>
+<button class="ftab" onclick="fOrd('cancelled',this)">Đã hủy</button>
 </div></div>
-<div class="tw"><div class="ts"><table><thead><tr><th>Mã đơn</th><th class="hide-sm">Các món</th><th class="mobile-col">Món & Ghi chú</th><th>Tổng</th><th>Trạng thái</th><th class="hide-sm">Thời gian</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
+<div class="tw"><div class="ts"><table><thead><tr><th>Mã đơn</th><th class="hide-sm">Các món</th><th class="mobile-col">Món & Ghi chú</th><th>Tổng</th><th>Thanh toán</th><th>Tiến trình</th><th class="hide-sm">Thời gian</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
 </div>
 
 <!-- MENU -->
@@ -110,7 +143,7 @@
 <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
 <input type="file" id="imgCameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleImageSelect(this)"/>
 </div>
-<button class="add-btn" onclick="addItem()">Thêm món</button>
+<button class="add-btn" onclick="addItem()">+ Thêm món</button>
 </div></div>
 <div class="mg" id="menuGrid"></div>
 </div>
@@ -162,6 +195,17 @@
 <div class="m-acts" style="justify-content:flex-end">
   <button class="m-btn m-sec" onclick="closeCancelModal()">Đóng</button>
   <button class="m-btn" style="background:var(--red);color:#fff;border:none" onclick="submitCancelOrder()">Xác nhận Hủy</button>
+</div>
+</div></div>
+
+<!-- Confirm dialog -->
+<div class="modal-bg" id="confirmModal"><div class="modal">
+<div class="confirm-icon" id="confirmIcon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+<h2 id="confirmTitle" style="font-size:18px">Xác nhận</h2>
+<p id="confirmMsg" style="margin:12px 0 20px">Bạn có chắc chắn?</p>
+<div class="m-acts">
+  <button class="m-btn m-sec" onclick="closeConfirm()">Hủy</button>
+  <button class="m-btn m-pri" id="confirmOk" onclick="confirmAction()">Xác nhận</button>
 </div>
 </div></div>
 
