@@ -214,6 +214,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 /* Surface hover for cancelled */
 tr.cancelled-row td{background:rgba(200,32,20,.02)}
 
+/* Order note */
+.order-note{margin-top:6px;padding:6px 10px;background:#faf8f4;border-left:3px solid var(--orange);border-radius:0 6px 6px 0;font-size:12px;color:var(--text);line-height:1.5;word-break:break-word;display:flex;align-items:flex-start;gap:5px;max-width:300px}
+.order-note svg{flex-shrink:0;margin-top:1px;color:var(--orange)}
+.ord-time{font-size:11px;color:var(--muted);margin-top:2px;font-weight:400}
+.ord-total{font-size:15px}
+
+/* Print button */
+.btn-print{background:#eef2ff;color:#4f46e5}
+
 /* Responsive */
 @media(max-width:1200px){.dash-grid{grid-template-columns:1fr}.dash-side{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
 @media(max-width:1024px){.stats{grid-template-columns:repeat(2,1fr)}.frow-fields{grid-template-columns:1fr 1fr}}
@@ -239,12 +248,31 @@ tr.cancelled-row td{background:rgba(200,32,20,.02)}
 .sh{flex-direction:column;align-items:stretch}
 .hide-sm{display:none!important}
 .mobile-col{display:block!important}
-.mobile-items{display:block!important;padding:8px 0;color:var(--text);font-size:12px;line-height:1.5}
-.mobile-items::before{content:'Món: ';font-weight:600;color:var(--muted)}
-#ordBody tr{display:flex;flex-direction:column;padding:12px 8px;border-bottom:1px solid var(--border);gap:8px}
-#ordBody td{display:block;padding:4px 0!important;text-align:left!important}
-#ordBody td:first-child{font-size:14px}
-#ordBody td:nth-child(4){font-size:16px;font-weight:700;color:var(--accent)}
-#ordBody td:last-child{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
-#ordBody td:last-child button{flex:1;padding:8px 12px;font-size:12px}
+.ts table{min-width:auto}
+.ts th{font-size:11px;padding:8px 10px}
+.ts td{padding:8px 10px}
+
+/* Mobile order cards */
+#ordBody tr{display:flex;flex-wrap:wrap;padding:14px 12px;border-bottom:2px solid var(--border);gap:4px;position:relative}
+#ordBody td{display:block;padding:2px 0!important;text-align:left!important;border:none!important}
+/* Row 1: order id */
+#ordBody td:first-child{width:100%;font-size:14px;margin-bottom:2px}
+/* Mobile items col */
+.mobile-items{width:100%!important;padding:6px 0!important;line-height:1.6;display:block!important}
+.mobile-items::before{content:'';font-weight:600;color:var(--muted)}
+.mobile-items .order-note{max-width:100%;margin-top:8px}
+/* Total */
+#ordBody td:nth-child(4){font-size:18px;font-weight:700;color:var(--accent);width:auto;margin-right:auto}
+/* Payment badge */
+#ordBody td:nth-child(5){width:auto}
+/* Actions row */
+#ordBody td:last-child{width:100%;display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+#ordBody td:last-child button{flex:1;min-width:70px;padding:10px 12px;font-size:13px;border-radius:10px}
+
+/* Revenue table mobile */
+#revBody tr{display:flex;flex-wrap:wrap;padding:12px 10px;border-bottom:1px solid var(--border);gap:4px}
+#revBody td{display:block;padding:2px 0!important;border:none!important}
+#revBody td:nth-child(1){display:none}
+#revBody td:nth-child(2){width:100%;font-size:14px}
+#revBody td:nth-child(4){font-size:16px;font-weight:700;color:var(--accent);margin-right:8px}
 }

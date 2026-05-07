@@ -150,29 +150,26 @@ function renderOrders() {
   let list = orders;
   if (orderFilter !== 'all') list = orders.filter(o => o.payment_status === orderFilter);
   const body = document.getElementById('ordBody');
-  if (!list.length) { body.innerHTML = '<tr><td colspan="8" class="empty">Không có đơn</td></tr>'; return; }
+  if (!list.length) { body.innerHTML = '<tr><td colspan="6" class="empty">Không có đơn</td></tr>'; return; }
   body.innerHTML = list.map(o => {
-    const itemsText = (o.items||[]).map(i => esc(i.name) + '×' + i.quantity).join(', ');
+    const itemsText = (o.items||[]).map(i => esc(i.name) + ' ×' + i.quantity).join(', ');
     const role = localStorage.getItem('admin_role');
     const isCancelled = o.payment_status === 'cancelled';
     const isPaid = o.payment_status === 'paid';
-    const os = o.order_status || 'pending';
-    const nextStatus = { pending: 'preparing', preparing: 'ready', ready: 'completed' };
-    const nextLabel = { pending: 'Chuẩn bị', preparing: 'Sẵn sàng', ready: 'Hoàn thành' };
+    const isCompleted = isPaid;
+    const noteHtml = o.notes ? `<div class="order-note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> ${esc(o.notes)}</div>` : '';
     return `<tr class="${isCancelled ? 'cancelled-row' : ''}">
-    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(shortId(o))}</strong></td>
-    <td class="hide-sm" style="font-size:12px;max-width:180px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
-    <td class="mobile-items" style="display:none;font-size:11px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">${itemsText}</td>
-    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong>${fm(o.total)}</strong></td>
+    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(shortId(o))}</strong><div class="ord-time">${fmtTime(o.created_at)}</div></td>
+    <td class="hide-sm" style="font-size:12px;max-width:220px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
+    <td class="mobile-items" style="display:none;font-size:12px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
+    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong class="ord-total">${fm(o.total)}</strong></td>
     <td>${badge(o.payment_status)}
       ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
     </td>
-    <td>${typeof orderStatusBadge === 'function' ? orderStatusBadge(os) : ''}</td>
-    <td class="hide-sm" style="color:var(--muted);font-size:12px">${fmtTime(o.created_at)}</td>
     <td style="white-space:nowrap">
-      ${(nextStatus[os] && !isCancelled) ? `<button class="btn-sm btn-status" onclick="updateOrderStatus('${o._id}','${nextStatus[os]}')">${nextLabel[os]}</button> ` : ''}
+      <button class="btn-sm btn-print" onclick="printBill('${o._id}')">In Bill</button>
       ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
-      ${!isCancelled ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy</button>` : ''}
+      ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy</button>` : ''}
       ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
     </td>
   </tr>`;
@@ -553,10 +550,10 @@ async function loadChart() {
 function renderStatusSummary() {
   const el = document.getElementById('statusSummary');
   if (!el) return;
-  const counts = { pending: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };
-  orders.forEach(o => { const s = o.order_status || 'pending'; if (counts[s] !== undefined) counts[s]++; });
-  const labels = { pending: 'Chờ xử lý', preparing: 'Đang chuẩn bị', ready: 'Sẵn sàng', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
-  const colors = { pending: '#ea580c', preparing: '#2563eb', ready: '#16a34a', completed: '#00754a', cancelled: '#c82014' };
+  const counts = { unpaid: 0, paid: 0, cancelled: 0 };
+  orders.forEach(o => { const s = o.payment_status || 'unpaid'; if (counts[s] !== undefined) counts[s]++; });
+  const labels = { unpaid: 'Chưa thanh toán', paid: 'Đã thanh toán', cancelled: 'Đã hủy' };
+  const colors = { unpaid: '#ea580c', paid: '#00754a', cancelled: '#c82014' };
   el.innerHTML = Object.keys(counts).map(k => `<div class="status-row">
     <div class="status-row-left"><div class="status-dot" style="background:${colors[k]}"></div><span>${labels[k]}</span></div>
     <div class="status-row-count">${counts[k]}</div>
@@ -610,3 +607,32 @@ loadData = async function() {
 // Override renderAll to include status summary
 const _origRenderAll = renderAll;
 renderAll = function() { _origRenderAll(); renderStatusSummary(); };
+
+// ===== PRINT BILL =====
+function printBill(id) {
+  const o = orders.find(x => x._id === id);
+  if (!o) { alert('Không tìm thấy đơn'); return; }
+  const ps = o.payment_status === 'paid' ? 'Đã thanh toán' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa thanh toán';
+  const time = o.created_at ? new Date(o.created_at).toLocaleString('vi', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+  const itemsHtml = (o.items||[]).map(i => `<tr><td style="text-align:left;padding:3px 0;font-size:13px">${esc(i.name)}</td><td style="text-align:center;padding:3px 4px;font-size:13px">${i.quantity}</td><td style="text-align:right;padding:3px 0;font-size:13px">${fm(i.subtotal || i.price * i.quantity)}</td></tr>`).join('');
+  const noteHtml = o.notes ? `<div style="margin-top:8px;padding:6px 8px;background:#f5f5f5;border-radius:4px;font-size:12px;word-break:break-word"><strong>Ghi chú:</strong> ${esc(o.notes)}</div>` : '';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill #${esc(shortId(o))}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;width:80mm;max-width:80mm;padding:8px;font-size:13px;color:#000}
+.center{text-align:center}.line{border-top:1px dashed #000;margin:8px 0}
+table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;border-bottom:1px solid #000;padding:4px 0}
+@media print{@page{size:80mm auto;margin:0}body{width:80mm}}</style></head>
+<body><div class="center"><strong style="font-size:16px">BÁNH MÌ KIM PHÁT</strong><br><span style="font-size:11px">Hóa đơn bán hàng</span></div>
+<div class="line"></div>
+<div style="font-size:12px"><div><strong>Mã đơn:</strong> #${esc(shortId(o))}</div><div><strong>Thời gian:</strong> ${time}</div><div><strong>Trạng thái:</strong> ${ps}</div></div>
+<div class="line"></div>
+<table><thead><tr><th style="text-align:left">Món</th><th style="text-align:center">SL</th><th style="text-align:right">Tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+<div class="line"></div>
+<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold"><span>TỔNG CỘNG</span><span>${fm(o.total)}</span></div>
+${noteHtml}
+<div class="line"></div>
+<div class="center" style="font-size:11px;color:#666;margin-top:4px">Cảm ơn quý khách!<br>Hẹn gặp lại!</div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script></body></html>`;
+  const w = window.open('', '_blank', 'width=350,height=600');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { alert('Vui lòng cho phép popup để in bill'); }
+}
