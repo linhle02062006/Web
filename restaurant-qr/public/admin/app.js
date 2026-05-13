@@ -157,19 +157,23 @@ function renderOrders() {
     const isCancelled = o.payment_status === 'cancelled';
     const isPaid = o.payment_status === 'paid';
     const isCompleted = isPaid;
+    const oCode = o.order_code || o.short_id || o._id?.slice(-6) || '---';
+    const total = o.total_price || o.total || 0;
+    const custInfo = o.customer_name ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(o.customer_name)}${o.customer_phone ? ' · ' + esc(o.customer_phone) : ''}</div>` : '';
     const noteHtml = o.notes ? `<div class="order-note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> ${esc(o.notes)}</div>` : '';
     return `<tr class="${isCancelled ? 'cancelled-row' : ''}">
-    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(shortId(o))}</strong><div class="ord-time">${fmtTime(o.created_at)}</div></td>
+    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(oCode)}</strong>${custInfo}<div class="ord-time">${fmtTime(o.created_at)}</div></td>
     <td class="hide-sm" style="font-size:12px;max-width:220px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
     <td class="mobile-items" style="display:none;font-size:12px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
-    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong class="ord-total">${fm(o.total)}</strong></td>
+    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong class="ord-total">${fm(total)}</strong></td>
     <td>${badge(o.payment_status)}
       ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
     </td>
     <td style="white-space:nowrap">
-      <button class="btn-sm btn-print" onclick="printBill('${o._id}')">In Bill</button>
+      <button class="btn-sm btn-print" onclick="printBill('${o._id}')" title="Hóa đơn A4">In Bill</button>
+      <button class="btn-sm" style="background:#f0f0ff;color:#4f46e5" onclick="printThermal('${o._id}')" title="Bill nhiệt 80mm">80mm</button>
       ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
-      ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(shortId(o))}')">Hủy</button>` : ''}
+      ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(oCode)}')">Hủy</button>` : ''}
       ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
     </td>
   </tr>`;
@@ -610,29 +614,55 @@ renderAll = function() { _origRenderAll(); renderStatusSummary(); };
 
 // ===== PRINT BILL =====
 function printBill(id) {
+  // Open the professional invoice page in a new tab
+  window.open('/invoice?id=' + id, '_blank');
+}
+
+// Quick thermal receipt (80mm) for kitchen use
+function printThermal(id) {
   const o = orders.find(x => x._id === id);
   if (!o) { alert('Không tìm thấy đơn'); return; }
-  const ps = o.payment_status === 'paid' ? 'Đã thanh toán' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa thanh toán';
+  const orderCode = o.order_code || o.short_id || o._id.slice(-6);
+  const ps = o.payment_status === 'paid' ? 'Đã TT' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa TT';
   const time = o.created_at ? new Date(o.created_at).toLocaleString('vi', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+  const total = o.total_price || o.total || 0;
   const itemsHtml = (o.items||[]).map(i => `<tr><td style="text-align:left;padding:3px 0;font-size:13px">${esc(i.name)}</td><td style="text-align:center;padding:3px 4px;font-size:13px">${i.quantity}</td><td style="text-align:right;padding:3px 0;font-size:13px">${fm(i.subtotal || i.price * i.quantity)}</td></tr>`).join('');
   const noteHtml = o.notes ? `<div style="margin-top:8px;padding:6px 8px;background:#f5f5f5;border-radius:4px;font-size:12px;word-break:break-word"><strong>Ghi chú:</strong> ${esc(o.notes)}</div>` : '';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill #${esc(shortId(o))}</title>
+  
+  // Build VietQR URL
+  const qrUrl = `https://img.vietqr.io/image/970415-102870682710-compact.png?amount=${total}&addInfo=${encodeURIComponent('THANH TOAN ' + orderCode)}`;
+  const showQR = o.payment_status !== 'paid' && o.payment_status !== 'cancelled';
+  
+  const qrSection = showQR ? `
+    <div class="line"></div>
+    <div class="center"><strong style="font-size:12px">THANH TOÁN CHUYỂN KHOẢN</strong></div>
+    <div class="center" style="margin:8px 0"><img src="${qrUrl}" style="width:160px;height:160px;border:2px solid #000;border-radius:8px" onerror="this.style.display='none'"/></div>
+    <div style="font-size:11px;text-align:center">
+      <div>VietinBank: 102870682710</div>
+      <div>Chủ TK: BANH MI KIM PHAT</div>
+      <div style="margin-top:4px;font-weight:bold">ND: THANH TOAN ${orderCode}</div>
+    </div>
+  ` : '';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill #${esc(orderCode)}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;width:80mm;max-width:80mm;padding:8px;font-size:13px;color:#000}
 .center{text-align:center}.line{border-top:1px dashed #000;margin:8px 0}
 table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;border-bottom:1px solid #000;padding:4px 0}
 @media print{@page{size:80mm auto;margin:0}body{width:80mm}}</style></head>
-<body><div class="center"><strong style="font-size:16px">BÁNH MÌ KIM PHÁT</strong><br><span style="font-size:11px">Hóa đơn bán hàng</span></div>
+<body><div class="center"><strong style="font-size:16px">BÁNH MÌ KIM PHÁT</strong><br><span style="font-size:11px">Hotline: 0123.456.789</span></div>
 <div class="line"></div>
-<div style="font-size:12px"><div><strong>Mã đơn:</strong> #${esc(shortId(o))}</div><div><strong>Thời gian:</strong> ${time}</div><div><strong>Trạng thái:</strong> ${ps}</div></div>
+<div style="font-size:12px"><div><strong>Mã đơn:</strong> #${esc(orderCode)}</div><div><strong>Thời gian:</strong> ${time}</div>${o.customer_name ? `<div><strong>Khách:</strong> ${esc(o.customer_name)}</div>` : ''}${o.customer_phone ? `<div><strong>SĐT:</strong> ${esc(o.customer_phone)}</div>` : ''}<div><strong>Trạng thái:</strong> ${ps}</div></div>
 <div class="line"></div>
 <table><thead><tr><th style="text-align:left">Món</th><th style="text-align:center">SL</th><th style="text-align:right">Tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table>
 <div class="line"></div>
-<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold"><span>TỔNG CỘNG</span><span>${fm(o.total)}</span></div>
+<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold"><span>TỔNG CỘNG</span><span>${fm(total)}</span></div>
 ${noteHtml}
+${qrSection}
 <div class="line"></div>
 <div class="center" style="font-size:11px;color:#666;margin-top:4px">Cảm ơn quý khách!<br>Hẹn gặp lại!</div>
 <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script></body></html>`;
-  const w = window.open('', '_blank', 'width=350,height=600');
+  const w = window.open('', '_blank', 'width=350,height=700');
   if (w) { w.document.write(html); w.document.close(); }
   else { alert('Vui lòng cho phép popup để in bill'); }
 }
+

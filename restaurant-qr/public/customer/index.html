@@ -154,7 +154,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
   </div>
   <div class="drawer-items" id="drawerItems"></div>
   <div class="note-box">
-    <label>Ghi chú cho quán</label>
+    <label>Thông tin khách hàng</label>
+    <input type="text" id="custName" placeholder="Tên khách hàng (tùy chọn)" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px;outline:none;padding:8px 0;margin-bottom:8px"/>
+    <input type="tel" id="custPhone" placeholder="Số điện thoại (tùy chọn)" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px;outline:none;padding:8px 0;margin-bottom:12px"/>
+    <label style="margin-top:8px">Ghi chú cho quán</label>
     <textarea id="noteInput" placeholder="Ít cay, không hành, thêm đá..."></textarea>
   </div>
   <div class="drawer-footer">
@@ -174,6 +177,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <span>Mã đơn hàng</span>
     <strong id="successOID">---</strong>
   </div>
+  <div id="successTotal" style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px"></div>
+  <button class="back-btn" id="viewInvoiceBtn" onclick="viewInvoice()" style="background:var(--accent);color:#fff;border-color:var(--accent);margin-bottom:8px">Xem hóa đơn & Thanh toán QR</button>
   <button class="back-btn" onclick="backToMenu()">Đặt thêm món khác</button>
   <button class="home-back" onclick="location.href='/'">← Về trang chủ</button>
 </div>
@@ -341,6 +346,9 @@ function closeCart() {
 }
 
 let ordering = false;
+let lastOrderId = null;
+let lastOrderDbId = null;
+
 function placeOrder() {
   if (!cart.length || ordering) return;
   ordering = true;
@@ -348,13 +356,22 @@ function placeOrder() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Đang đặt món...';
   const note = document.getElementById('noteInput').value;
+  const custName = document.getElementById('custName').value.trim();
+  const custPhone = document.getElementById('custPhone').value.trim();
+
+  // Generate idempotency key to prevent duplicate orders on refresh
+  const idempotencyKey = 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
   fetch('/api/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       table_id: tableId,
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
-      notes: note
+      items: cart.map(i => ({ id: i.id, name: i.name, quantity: i.quantity })),
+      notes: note,
+      customer_name: custName,
+      customer_phone: custPhone,
+      idempotency_key: idempotencyKey
     })
   })
   .then(r => r.json())
@@ -363,15 +380,29 @@ function placeOrder() {
     btn.disabled = false;
     btn.innerHTML = 'ĐẶT MÓN NGAY';
     if (data.success) {
-      document.getElementById('successOID').textContent = data.order_id;
+      lastOrderId = data.order_code || data.order_id;
+      lastOrderDbId = data._id;
+      document.getElementById('successOID').textContent = lastOrderId;
+      document.getElementById('successTotal').textContent = 'Tổng: ' + fmt(data.total);
       document.getElementById('successScreen').classList.add('show');
       cart = [];
       updateCartUI();
       document.getElementById('noteInput').value = '';
-    } else { alert('Lỗi: ' + (data.error || 'Không thể đặt món')); }
+      document.getElementById('custName').value = '';
+      document.getElementById('custPhone').value = '';
+    } else {
+      const errMsg = data.errors ? data.errors.join('\n') : (data.error || 'Không thể đặt món');
+      alert('Lỗi: ' + errMsg);
+    }
   })
   .catch(err => { ordering = false; btn.disabled = false; btn.innerHTML = 'ĐẶT MÓN NGAY'; alert('Lỗi kết nối: ' + err.message); });
   closeCart();
+}
+
+function viewInvoice() {
+  if (lastOrderDbId) {
+    window.location.href = '/invoice?id=' + lastOrderDbId;
+  }
 }
 
 function backToMenu() { document.getElementById('successScreen').classList.remove('show'); }

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hóa Đơn - Bánh Mì Kim Phát</title>
+<meta name="description" content="Hóa đơn thanh toán - Bánh Mì Kim Phát"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+/* ===================== RESET & VARIABLES ===================== */
+:root {
+  --bg: #f2f0eb;
+  --card: #fff;
+  --text: #1e3932;
+  --muted: #6b7280;
+  --accent: #006241;
+  --accent2: #00754a;
+  --gold: #cba258;
+  --border: rgba(0,0,0,.08);
+  --radius: 14px;
+  --shadow: 0 4px 20px rgba(0,0,0,.08);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* ===================== INVOICE CONTAINER ===================== */
+.invoice-wrap {
+  width: 100%;
+  max-width: 800px;
+}
+
+.invoice {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* ===================== HEADER ===================== */
+.inv-header {
+  background: linear-gradient(135deg, #1e3932, #006241);
+  padding: 32px 36px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.inv-shop { flex: 1; }
+.inv-logo {
+  width: 56px; height: 56px;
+  background: rgba(255,255,255,.15);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--gold);
+  margin-bottom: 12px;
+  border: 2px solid rgba(203,162,88,.3);
+}
+.inv-shop-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.inv-shop-tag { font-size: 13px; color: rgba(255,255,255,.6); margin-bottom: 10px; }
+.inv-shop-contact { font-size: 12px; color: rgba(255,255,255,.5); line-height: 1.8; }
+.inv-shop-contact span { display: block; }
+
+.inv-title-right { text-align: right; flex-shrink: 0; }
+.inv-title-badge {
+  display: inline-block;
+  background: rgba(203,162,88,.2);
+  border: 1px solid rgba(203,162,88,.4);
+  color: var(--gold);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.inv-code {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.inv-date { font-size: 12px; color: rgba(255,255,255,.5); }
+
+/* ===================== STATUS BADGE ===================== */
+.inv-status {
+  display: flex;
+  justify-content: center;
+  padding: 12px 36px;
+  background: #f0fdf4;
+  border-bottom: 1px solid var(--border);
+}
+.inv-status.unpaid { background: #fff7ed; }
+.inv-status.cancelled { background: #fef2f2; }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.status-badge.paid { background: #dcfce7; color: #16a34a; }
+.status-badge.unpaid { background: #ffedd5; color: #ea580c; }
+.status-badge.cancelled { background: #fce8e6; color: #c82014; }
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ===================== CUSTOMER INFO ===================== */
+.inv-customer {
+  padding: 24px 36px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.inv-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.inv-field span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ===================== ITEMS TABLE ===================== */
+.inv-items { padding: 0 36px; }
+.inv-items-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  padding: 20px 0 12px;
+  border-bottom: 2px solid var(--text);
+}
+.inv-items table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.inv-items thead th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--muted);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.inv-items thead th:first-child { text-align: left; }
+.inv-items thead th:not(:first-child) { text-align: right; }
+.inv-items tbody td {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.inv-items tbody td:first-child { font-weight: 600; text-align: left; }
+.inv-items tbody td:not(:first-child) { text-align: right; }
+.inv-items tbody tr:last-child td { border-bottom: none; }
+.item-name { font-weight: 600; }
+.item-price { color: var(--muted); }
+.item-qty { font-weight: 600; }
+.item-subtotal { font-weight: 700; color: var(--accent); }
+
+/* ===================== TOTALS ===================== */
+.inv-totals {
+  padding: 0 36px 24px;
+  border-top: 2px solid var(--text);
+  margin-top: 4px;
+}
+.inv-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+}
+.inv-total-row.sub { color: var(--muted); }
+.inv-total-row.discount { color: #c82014; }
+.inv-total-row.grand {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  border-top: 2px solid var(--border);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+/* ===================== NOTES ===================== */
+.inv-notes {
+  padding: 16px 36px;
+  border-top: 1px solid var(--border);
+  background: #faf8f4;
+}
+.inv-notes-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.inv-notes-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* ===================== QR PAYMENT SECTION ===================== */
+.inv-payment {
+  padding: 28px 36px;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(135deg, #faf8f4, #f5f0e8);
+}
+.inv-payment-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.inv-payment-sub {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 20px;
+}
+.inv-qr-container {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+}
+.inv-qr-code {
+  width: 200px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.inv-qr-code img {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 3px solid var(--accent);
+  box-shadow: 0 4px 16px rgba(0,98,65,.15);
+  background: #fff;
+}
+.inv-qr-code .qr-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  font-weight: 600;
+}
+.inv-bank-info {
+  flex: 1;
+  min-width: 0;
+}
+.inv-bank-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.inv-bank-row:last-child { border-bottom: none; }
+.inv-bank-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--muted);
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.inv-bank-value {
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-all;
+}
+.inv-bank-value.highlight {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 16px;
+}
+.inv-transfer-content {
+  margin-top: 16px;
+  background: var(--accent);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  text-align: center;
+}
+.inv-transfer-content .label {
+  font-size: 10px;
+  opacity: .7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.inv-transfer-content .content {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* ===================== FOOTER ===================== */
+.inv-footer {
+  padding: 20px 36px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.inv-footer strong { color: var(--text); }
+
+/* ===================== ACTION BUTTONS ===================== */
+.inv-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 24px 0 0;
+}
+.inv-btn {
+  padding: 14px 28px;
+  border-radius: var(--radius);
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .2s;
+}
+.inv-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.inv-btn-primary {
+  background: linear-gradient(135deg, var(--accent), #1e3932);
+  color: #fff;
+}
+.inv-btn-secondary {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.inv-btn-back { background: none; border: none; color: var(--accent); text-decoration: underline; padding: 10px; }
+
+/* ===================== LOADING ===================== */
+.inv-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px;
+  color: var(--muted);
+  gap: 16px;
+}
+.inv-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.inv-error {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--muted);
+}
+.inv-error h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 640px) {
+  body { padding: 12px 8px; }
+  .inv-header { padding: 24px 20px; flex-direction: column; }
+  .inv-title-right { text-align: left; }
+  .inv-customer { padding: 20px; grid-template-columns: 1fr; gap: 12px; }
+  .inv-items { padding: 0 20px; }
+  .inv-totals { padding: 0 20px 20px; }
+  .inv-payment { padding: 24px 20px; }
+  .inv-qr-container { flex-direction: column; align-items: center; }
+  .inv-qr-code { width: 180px; }
+  .inv-qr-code img { width: 180px; height: 180px; }
+  .inv-notes { padding: 16px 20px; }
+  .inv-footer { padding: 16px 20px; }
+  .inv-actions { flex-direction: column; padding: 20px 0 0; }
+  .inv-btn { justify-content: center; }
+}
+
+/* ===================== PRINT STYLES ===================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  body {
+    background: #fff !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .invoice-wrap { max-width: 100%; }
+  .invoice {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .inv-header {
+    background: #1e3932 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .inv-actions { display: none !important; }
+  .inv-btn-back { display: none !important; }
+  .inv-payment {
+    background: #faf8f4 !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .inv-qr-code img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  .inv-transfer-content {
+    background: #006241 !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .status-badge {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .inv-status {
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+
+/* ===================== THERMAL 80mm PRINT ===================== */
+@media print and (max-width: 80mm) {
+  @page { size: 80mm auto; margin: 2mm; }
+  body { width: 80mm; }
+  .inv-header { padding: 12px; }
+  .inv-shop-name { font-size: 16px; }
+  .inv-qr-code img { width: 140px; height: 140px; }
+  .inv-items tbody td { font-size: 12px; padding: 8px 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="invoice-wrap" id="invoiceWrap">
+  <div class="inv-loading" id="invoiceLoading">
+    <div class="inv-spinner"></div>
+    <span>Đang tải hóa đơn...</span>
+  </div>
+</div>
+
+<script>
+// Get order ID from URL
+const params = new URLSearchParams(location.search);
+const orderId = params.get('id');
+const orderCode = params.get('code');
+
+if (!orderId && !orderCode) {
+  showError('Không tìm thấy mã đơn hàng trong URL');
+} else {
+  loadInvoice();
+}
+
+async function loadInvoice() {
+  try {
+    const endpoint = orderId
+      ? `/api/orders/${orderId}/invoice`
+      : `/api/orders/${orderCode}/invoice`;
+
+    const res = await fetch(endpoint);
+    const data = await res.json();
+
+    if (!data.success || !data.invoice) {
+      showError('Không tìm thấy đơn hàng');
+      return;
+    }
+
+    renderInvoice(data.invoice);
+  } catch (err) {
+    showError('Lỗi tải hóa đơn: ' + err.message);
+  }
+}
+
+function renderInvoice(inv) {
+  const wrap = document.getElementById('invoiceWrap');
+  const shop = inv.shop || {};
+  const bank = inv.bank || {};
+  const items = inv.items || [];
+  const orderCode = inv.order_code || inv.short_id || '---';
+  const totalPrice = inv.total_price || inv.total || 0;
+  const subtotal = inv.subtotal || totalPrice;
+  const shippingFee = inv.shipping_fee || 0;
+  const discount = inv.discount || 0;
+  const qrUrl = inv.qr_url || '';
+  const transferContent = inv.transfer_content || `THANH TOAN ${orderCode}`;
+
+  const createdAt = inv.created_at
+    ? new Date(inv.created_at).toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        hour12: false
+      })
+    : '';
+
+  // Payment status
+  let statusClass = 'unpaid';
+  let statusText = 'Chưa thanh toán';
+  if (inv.payment_status === 'paid') { statusClass = 'paid'; statusText = 'Đã thanh toán'; }
+  if (inv.payment_status === 'cancelled') { statusClass = 'cancelled'; statusText = 'Đã hủy'; }
+
+  // Items rows
+  const itemsHtml = items.map((item, i) => {
+    const sub = item.subtotal || (item.price * item.quantity);
+    return `<tr>
+      <td class="item-name">${esc(item.name)}</td>
+      <td class="item-price">${fmt(item.price)}</td>
+      <td class="item-qty">${item.quantity}</td>
+      <td class="item-subtotal">${fmt(sub)}</td>
+    </tr>`;
+  }).join('');
+
+  // Notes section
+  const notesHtml = inv.notes
+    ? `<div class="inv-notes">
+        <div class="inv-notes-label">Ghi chú</div>
+        <div class="inv-notes-text">${esc(inv.notes)}</div>
+      </div>`
+    : '';
+
+  // QR section (only show if not yet paid)
+  const showQR = inv.payment_status !== 'paid' && inv.payment_status !== 'cancelled';
+  const qrHtml = showQR ? `
+    <div class="inv-payment">
+      <div class="inv-payment-title">Thanh Toán Chuyển Khoản</div>
+      <div class="inv-payment-sub">Quét mã QR hoặc chuyển khoản theo thông tin bên dưới</div>
+      <div class="inv-qr-container">
+        <div class="inv-qr-code">
+          <img src="${esc(qrUrl)}" alt="QR Thanh toán" id="qrImg" onerror="this.style.display='none'"/>
+          <div class="qr-label">Quét để thanh toán</div>
+        </div>
+        <div class="inv-bank-info">
+          <div class="inv-bank-row">
+            <div class="inv-bank-label">Ngân hàng</div>
+            <div class="inv-bank-value">${esc(bank.bankName || 'VietinBank')}</div>
+          </div>
+          <div class="inv-bank-row">
+            <div class="inv-bank-label">Số tài khoản</div>
+            <div class="inv-bank-value highlight">${esc(bank.accountNumber || '')}</div>
+          </div>
+          <div class="inv-bank-row">
+            <div class="inv-bank-label">Chủ tài khoản</div>
+            <div class="inv-bank-value">${esc(bank.accountName || '')}</div>
+          </div>
+          <div class="inv-bank-row">
+            <div class="inv-bank-label">Số tiền</div>
+            <div class="inv-bank-value highlight">${fmt(totalPrice)}</div>
+          </div>
+          <div class="inv-transfer-content">
+            <div class="label">Nội dung chuyển khoản</div>
+            <div class="content">${esc(transferContent)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ` : `
+    <div class="inv-payment" style="background:#f0fdf4;text-align:center;padding:20px 36px">
+      <div style="color:#16a34a;font-weight:700;font-size:15px">✓ Đơn hàng đã được thanh toán</div>
+    </div>
+  `;
+
+  wrap.innerHTML = `
+    <div class="invoice">
+      <!-- Header -->
+      <div class="inv-header">
+        <div class="inv-shop">
+          <div class="inv-logo">${esc(shop.logoText || 'KP')}</div>
+          <div class="inv-shop-name">${esc(shop.name || 'Bánh Mì Kim Phát')}</div>
+          <div class="inv-shop-tag">${esc(shop.tagline || '')}</div>
+          <div class="inv-shop-contact">
+            <span>Hotline: ${esc(shop.hotline || '')}</span>
+            <span>Địa chỉ: ${esc(shop.address || '')}</span>
+          </div>
+        </div>
+        <div class="inv-title-right">
+          <div class="inv-title-badge">HÓA ĐƠN</div>
+          <div class="inv-code">#${esc(orderCode)}</div>
+          <div class="inv-date">${createdAt}</div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="inv-status ${statusClass}">
+        <div class="status-badge ${statusClass}">
+          <div class="status-dot"></div>
+          ${statusText}
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="inv-customer">
+        <div class="inv-field">
+          <label>Khách hàng</label>
+          <span>${esc(inv.customer_name || 'Khách lẻ')}</span>
+        </div>
+        <div class="inv-field">
+          <label>Số điện thoại</label>
+          <span>${esc(inv.customer_phone || '—')}</span>
+        </div>
+        <div class="inv-field">
+          <label>Mã đơn hàng</label>
+          <span style="color:var(--accent);font-weight:800">${esc(orderCode)}</span>
+        </div>
+        <div class="inv-field">
+          <label>Hình thức</label>
+          <span>${inv.table_id === 'takeaway' ? 'Mang đi' : 'Bàn ' + esc(inv.table_id || '')}</span>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="inv-items">
+        <div class="inv-items-title">Chi tiết đơn hàng</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left">Sản phẩm</th>
+              <th>Đơn giá</th>
+              <th>SL</th>
+              <th>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div class="inv-totals">
+        <div class="inv-total-row sub">
+          <span>Tạm tính</span>
+          <span>${fmt(subtotal)}</span>
+        </div>
+        <div class="inv-total-row sub">
+          <span>Phí giao hàng</span>
+          <span>${shippingFee > 0 ? fmt(shippingFee) : 'Miễn phí'}</span>
+        </div>
+        ${discount > 0 ? `<div class="inv-total-row discount">
+          <span>Giảm giá</span>
+          <span>-${fmt(discount)}</span>
+        </div>` : ''}
+        <div class="inv-total-row grand">
+          <span>TỔNG THANH TOÁN</span>
+          <span>${fmt(totalPrice)}</span>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      ${notesHtml}
+
+      <!-- QR Payment -->
+      ${qrHtml}
+
+      <!-- Footer -->
+      <div class="inv-footer">
+        <strong>Cảm ơn quý khách đã mua hàng!</strong><br/>
+        Mọi thắc mắc vui lòng liên hệ: <strong>${esc(shop.hotline || '')}</strong>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="inv-actions">
+      <button class="inv-btn inv-btn-primary" onclick="window.print()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        In hóa đơn
+      </button>
+      <button class="inv-btn inv-btn-secondary" onclick="location.href='/order'">
+        Đặt thêm món
+      </button>
+      <button class="inv-btn inv-btn-back" onclick="location.href='/'">
+        ← Về trang chủ
+      </button>
+    </div>
+  `;
+}
+
+function showError(msg) {
+  document.getElementById('invoiceWrap').innerHTML = `
+    <div class="invoice">
+      <div class="inv-error">
+        <h3>Không thể tải hóa đơn</h3>
+        <p>${esc(msg)}</p>
+        <div style="margin-top:20px">
+          <button class="inv-btn inv-btn-secondary" onclick="location.href='/order'">Đặt món</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function fmt(n) { return (n || 0).toLocaleString('vi-VN') + 'đ'; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+</script>
+</body>
+</html>
