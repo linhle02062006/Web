@@ -77,8 +77,9 @@ router.get('/:id/invoice', async (req, res) => {
 // Checkout (mark as paid)
 router.post('/:id/checkout', authMiddleware, async (req, res) => {
   try {
-    await orderService.checkout(req.params.id);
-    if (req.io) req.io.emit('order-updated', { _id: req.params.id, payment_status: 'paid', order_status: 'completed' });
+    const paymentMethod = req.body.payment_method || 'CASH';
+    await orderService.checkout(req.params.id, paymentMethod);
+    if (req.io) req.io.emit('order-updated', { _id: req.params.id, payment_status: 'paid', order_status: 'completed', payment_method: paymentMethod });
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -88,10 +89,12 @@ router.post('/:id/checkout', authMiddleware, async (req, res) => {
 // Update payment status
 router.patch('/:id', authMiddleware, async (req, res) => {
   try {
-    const { payment_status } = req.body;
-    if (!payment_status) return res.status(400).json({ success: false, error: 'Missing payment_status' });
-    await orderService.updatePaymentStatus(req.params.id, payment_status);
-    if (req.io) req.io.emit('order-updated', { _id: req.params.id, payment_status });
+    const { payment_status, payment_method } = req.body;
+    await orderService.updatePaymentStatus(req.params.id, payment_status, payment_method);
+    const updatePayload = { _id: req.params.id };
+    if (payment_status) updatePayload.payment_status = payment_status;
+    if (payment_method) updatePayload.payment_method = payment_method;
+    if (req.io) req.io.emit('order-updated', updatePayload);
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

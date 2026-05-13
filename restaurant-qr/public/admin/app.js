@@ -65,7 +65,14 @@ socket.on('connect', () => { document.getElementById('connTxt').textContent = '�
 socket.on('disconnect', () => { document.getElementById('connTxt').textContent = 'Mất kết nối'; });
 
 socket.on('new-order', (o) => { orders.unshift(o); renderAll(); notifyNew(o); });
-socket.on('order-updated', (u) => { const i = orders.findIndex(o => o._id === u._id); if (i >= 0) orders[i].payment_status = u.payment_status; renderAll(); });
+socket.on('order-updated', (u) => { 
+  const i = orders.findIndex(o => o._id === u._id); 
+  if (i >= 0) {
+    if (u.payment_status) orders[i].payment_status = u.payment_status;
+    if (u.payment_method) orders[i].payment_method = u.payment_method;
+  }
+  renderAll(); 
+});
 socket.on('order-deleted', (u) => { orders = orders.filter(o => o._id !== u._id); renderAll(); });
 socket.on('menu-updated', () => loadMenu());
 
@@ -141,7 +148,7 @@ function renderDash() {
     <td><strong>${fm(o.total)}</strong></td>
     <td>${badge(o.payment_status)}</td>
     <td class="hide-sm" style="color:var(--muted);font-size:12px">${fmtTime(o.created_at)}</td>
-    <td>${o.payment_status !== 'paid' ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button>` : '—'}</td>
+    <td>${o.payment_status !== 'paid' ? `<button class="btn-sm btn-pay" onclick="openPaymentModal('${o._id}')">Thanh toán</button>` : '—'}</td>
   </tr>`).join('');
 }
 
@@ -200,9 +207,8 @@ renderOrders = function() {
     </td>
     <td>
       <div class="action-buttons">
-        <button class="btn-sm btn-print" onclick="printBill('${o._id}')" title="Hóa đơn A4">In Bill</button>
-        <button class="btn-sm" style="background:#f0f0ff;color:#4f46e5" onclick="printThermal('${o._id}')" title="Bill nhiệt 80mm">80mm</button>
-        ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
+        ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="openPaymentModal('${o._id}')">Thanh toán</button>` : ''}
+        ${(isPaid) ? `<button class="btn-sm" style="background:#f0f0ff;color:#4f46e5" onclick="printThermal('${o._id}', '${paymentMethod}')">In lại bill</button>` : ''}
         ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(oCode)}')">Hủy</button>` : ''}
         ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
       </div>
@@ -211,15 +217,63 @@ renderOrders = function() {
   }).join('');
 };
 
-async function checkout(id) {
-  if (!confirm('Xác nhận thanh toán?')) return;
-  try {
-    await api(`/api/orders/${id}/checkout`, 'POST');
-    const i = orders.findIndex(o => o._id === id);
-    if (i >= 0) orders[i].payment_status = 'paid';
-    renderAll();
-  } catch (e) { alert('Lỗi: ' + e.message); }
+let payTargetId = null;
+function openPaymentModal(id) {
+  const o = orders.find(x => x._id === id);
+  if (!o) return;
+  payTargetId = id;
+  const oCode = o.order_code || o.short_id || o._id.slice(-6);
+  document.getElementById('payOrderIdTxt').textContent = '#' + oCode;
+  document.getElementById('payOrderTotal').textContent = fm(o.total_price || o.total || 0);
+  selectPayMethod('CASH'); // default
+  document.getElementById('paymentModal').classList.add('show');
 }
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('show');
+  payTargetId = null;
+}
+
+function selectPayMethod(method) {
+  document.getElementById('lblCash').classList.toggle('active', method === 'CASH');
+  document.getElementById('lblTransfer').classList.toggle('active', method === 'BANK_TRANSFER');
+  document.querySelector(`input[name="payMethod"][value="${method}"]`).checked = true;
+}
+
+async function processPayment(confirmPaid, doPrint) {
+  if (!payTargetId) return;
+  const method = document.querySelector('input[name="payMethod"]:checked').value;
+  const id = payTargetId;
+  
+  // Update order's payment method locally for printing
+  const i = orders.findIndex(o => o._id === id);
+  if (i >= 0) {
+    orders[i].payment_method = method;
+  }
+
+  if (confirmPaid) {
+    // Check out the order
+    try {
+      await api(`/api/orders/${id}/checkout`, 'POST', { payment_method: method });
+      if (i >= 0) {
+        orders[i].payment_status = 'paid';
+        orders[i].payment_method = method;
+      }
+      renderAll();
+      closePaymentModal();
+      if (doPrint) printThermal(id, method, true);
+    } catch (e) { alert('Lỗi: ' + e.message); }
+  } else {
+    // Just print the bill, update payment method silently
+    try {
+      await api(`/api/orders/${id}`, 'PATCH', { payment_method: method }); 
+    } catch (e) {}
+    closePaymentModal();
+    if (doPrint) printThermal(id, method, false);
+  }
+}
+
+
 
 async function delOrder(id) {
   if (!confirm('Xóa đơn hàng này?')) return;
@@ -643,16 +697,16 @@ function printBill(id) {
 }
 
 // Quick thermal receipt (58mm/80mm) for kitchen use
-function printThermal(id) {
+function printThermal(id, forcedMethod = null, isConfirming = false) {
   const o = orders.find(x => x._id === id);
   if (!o) { alert('Không tìm thấy đơn'); return; }
 
   const orderCode = o.order_code || o.short_id || o._id.slice(-6);
-  const paymentMethod = o.payment_method || 'CASH';
+  const paymentMethod = forcedMethod || o.payment_method || 'CASH';
   const isCash = paymentMethod === 'CASH';
   const isBankTransfer = paymentMethod === 'BANK_TRANSFER';
 
-  const ps = o.payment_status === 'paid' ? 'Đã TT' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa TT';
+  const ps = (o.payment_status === 'paid' || isConfirming) ? 'Đã TT' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa TT';
   const time = o.created_at ? new Date(o.created_at).toLocaleString('vi', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' }) : '';
   const total = o.total_price || o.total || 0;
 
@@ -668,9 +722,9 @@ function printThermal(id) {
   // Payment method badge
   const payMethodBadge = isCash ? '<span style="background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">TIEN MAT</span>' : '<span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">CK NH</span>';
 
-  // Build QR section for BANK TRANSFER only, unpaid orders
+  // Build QR section for BANK TRANSFER only
   let qrSection = '';
-  if (isBankTransfer && o.payment_status !== 'paid' && o.payment_status !== 'cancelled') {
+  if (isBankTransfer) {
     const qrUrl = `https://img.vietqr.io/image/970415-102870682710-compact.png?amount=${total}&addInfo=${encodeURIComponent('THANH TOAN ' + orderCode)}`;
     qrSection = `
     <div style="border-top:1px dashed #000;margin:8px 0"></div>
@@ -680,16 +734,6 @@ function printThermal(id) {
       <div>VietinBank: 102870682710</div>
       <div>Chu TK: BANH MI KIM PHAT</div>
       <div style="margin-top:4px;font-weight:bold">ND: THANH TOAN ${orderCode}</div>
-    </div>`;
-  }
-
-  // Cash payment note - no QR
-  let cashNote = '';
-  if (isCash && o.payment_status !== 'paid' && o.payment_status !== 'cancelled') {
-    cashNote = `
-    <div style="text-align:center;margin-top:8px;padding:8px;background:#dcfce7;border-radius:6px">
-      <div style="font-size:11px;color:#166534"><strong>VU long tra tien mat khi nhan hang</strong></div>
-      <div style="font-size:14px;font-weight:800;color:#16a34a;margin-top:4px">${fm(total)}</div>
     </div>`;
   }
 
@@ -733,7 +777,6 @@ th{font-size:10px;text-transform:uppercase;border-bottom:1px solid #000;padding:
   <span>TONG</span><span>${fm(total)}</span>
 </div>
 ${noteHtml}
-${cashNote}
 ${qrSection}
 <div class="dashed"></div>
 <div class="footer">Cam on quy khach!<br>Hen gap lai!</div>

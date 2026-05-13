@@ -216,6 +216,36 @@
 </div>
 </div></div>
 
+<!-- Payment / Print Modal -->
+<div class="modal-bg" id="paymentModal"><div class="modal" style="text-align:left">
+<h2 style="font-size:18px;margin-bottom:10px;">Thanh toán <span id="payOrderIdTxt" style="color:var(--accent)"></span></h2>
+<div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:20px;text-align:center" id="payOrderTotal">0đ</div>
+<label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px">Hình thức thanh toán</label>
+<div style="display:flex;gap:12px;margin-bottom:24px">
+  <label style="flex:1;border:2px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:8px" id="lblCash" onclick="selectPayMethod('CASH')">
+    <input type="radio" name="payMethod" value="CASH" checked style="display:none">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+    <strong>Tiền mặt</strong>
+  </label>
+  <label style="flex:1;border:2px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:8px" id="lblTransfer" onclick="selectPayMethod('BANK_TRANSFER')">
+    <input type="radio" name="payMethod" value="BANK_TRANSFER" style="display:none">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18"/><path d="M8 12h8"/><path d="M8 16h8"/></svg>
+    <strong>Chuyển khoản</strong>
+  </label>
+</div>
+<style>
+  #lblCash.active, #lblTransfer.active { border-color: var(--accent); background: rgba(0,98,65,.05); }
+</style>
+<div class="m-acts" style="justify-content:space-between; flex-wrap: wrap; gap: 8px;">
+  <button class="m-btn m-sec" onclick="closePaymentModal()">Đóng</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="m-btn m-pri" style="background:#f0f0ff;color:#4f46e5;border:none" onclick="processPayment(false, true)">Chỉ in Bill</button>
+    <button class="m-btn m-pri" style="background:#dcfce7;color:#16a34a;border:none" onclick="processPayment(true, false)">Xác nhận Đã TT</button>
+    <button class="m-btn m-pri" onclick="processPayment(true, true)">In Bill & Xác nhận</button>
+  </div>
+</div>
+</div></div>
+
 <script src="/admin/app.js"></script>
 </body>
 </html>

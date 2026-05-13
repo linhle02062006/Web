@@ -107,7 +107,7 @@ class OrderService {
       // Backward compat
       total: totalPrice,
       payment_method: orderPaymentMethod,
-      payment_status: orderPaymentMethod === 'CASH' ? 'paid' : 'unpaid',
+      payment_status: 'unpaid',
       order_status: 'pending',
       idempotency_key: idempotency_key || null,
       created_at: new Date(),
@@ -183,13 +183,18 @@ class OrderService {
   /**
    * Mark order as paid
    */
-  async checkout(id) {
+  async checkout(id, payment_method) {
     const db = getDB();
     if (!db) throw new Error('Database not available');
 
+    const updateData = { payment_status: 'paid', order_status: 'completed', updated_at: new Date() };
+    if (payment_method) {
+      updateData.payment_method = payment_method;
+    }
+
     const result = await db.collection('orders').updateOne(
       { _id: new ObjectId(id) },
-      { $set: { payment_status: 'paid', order_status: 'completed', updated_at: new Date() } }
+      { $set: updateData }
     );
 
     if (result.matchedCount === 0) throw new Error('Đơn hàng không tồn tại');
@@ -199,11 +204,16 @@ class OrderService {
   /**
    * Update payment status
    */
-  async updatePaymentStatus(id, payment_status) {
+  async updatePaymentStatus(id, payment_status, payment_method) {
     const db = getDB();
     if (!db) throw new Error('Database not available');
 
-    const updateData = { payment_status, updated_at: new Date() };
+    const updateData = { updated_at: new Date() };
+    if (payment_status) updateData.payment_status = payment_status;
+    if (payment_method) updateData.payment_method = payment_method;
+
+    if (Object.keys(updateData).length === 1) return { success: true }; // Only updated_at
+
     const result = await db.collection('orders').updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }

@@ -110,114 +110,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .empty-state .empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
 .empty-state p{font-size:14px}
 
-/* Payment Section */
-.payment-section {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.payment-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 12px;
-}
-.payment-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.payment-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all .2s;
-  background: var(--card);
-}
-.payment-option:hover {
-  border-color: var(--accent);
-  background: rgba(0, 98, 65, .03);
-}
-.payment-option.active {
-  border-color: var(--accent);
-  background: rgba(0, 98, 65, .06);
-}
-.payment-option input[type="radio"] {
-  display: none;
-}
-.payment-icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-.payment-option.active .payment-icon {
-  background: var(--accent);
-}
-.payment-label {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.payment-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-.payment-option-info {
-  flex: 1;
-}
-.payment-check {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all .2s;
-}
-.payment-option.active .payment-check {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.payment-option.active .payment-check::after {
-  content: '✓';
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
 
-/* Cash payment success message */
-.cash-note {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  border: 1px solid #86efac;
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin: 0 20px 16px;
-  font-size: 13px;
-  color: #166534;
-  line-height: 1.5;
-  display: none;
-}
-.cash-note.show {
-  display: block;
-}
-.cash-note strong {
-  display: block;
-  margin-bottom: 4px;
-}
 </style>
 </head>
 <body>
@@ -263,24 +156,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
   </div>
   <div class="drawer-items" id="drawerItems"></div>
 
-  <!-- Payment Method Selection -->
-  <div class="payment-section">
-    <div class="payment-title">Hình thức thanh toán</div>
-    <div class="payment-options">
-      <label class="payment-option active" data-value="CASH">
-        <input type="radio" name="paymentMethod" value="CASH" checked/>
-        <span class="payment-icon">💵</span>
-        <span class="payment-label">Tiền mặt</span>
-        <span class="payment-desc">Thanh toán trực tiếp khi nhận hàng</span>
-      </label>
-      <label class="payment-option" data-value="BANK_TRANSFER">
-        <input type="radio" name="paymentMethod" value="BANK_TRANSFER"/>
-        <span class="payment-icon">🏦</span>
-        <span class="payment-label">Chuyển khoản</span>
-        <span class="payment-desc">Quét QR hoặc chuyển khoản ngân hàng</span>
-      </label>
-    </div>
-  </div>
+
 
   <div class="note-box">
     <label>Thông tin khách hàng</label>
@@ -306,9 +182,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <span>Mã đơn hàng</span>
     <strong id="successOID">---</strong>
   </div>
-  <div id="successTotal" style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px"></div>
-  <div id="successPaymentInfo" class="cash-note"></div>
-  <button class="back-btn" id="viewInvoiceBtn" onclick="viewInvoice()" style="background:var(--accent);color:#fff;border-color:var(--accent);margin-bottom:8px">Xem hóa đơn</button>
   <button class="back-btn" onclick="backToMenu()">Đặt thêm món khác</button>
   <button class="home-back" onclick="location.href='/'">← Về trang chủ</button>
 </div>
@@ -475,28 +348,11 @@ function closeCart() {
   document.getElementById('overlay').classList.remove('show');
 }
 
+
+
 let ordering = false;
 let lastOrderId = null;
 let lastOrderDbId = null;
-let lastPaymentMethod = 'CASH';
-
-// Payment method selection
-document.querySelectorAll('.payment-option').forEach(opt => {
-  opt.addEventListener('click', function() {
-    document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('active'));
-    this.classList.add('active');
-    this.querySelector('input').checked = true;
-    lastPaymentMethod = this.dataset.value;
-
-    // Update button text based on payment method
-    const btn = document.getElementById('orderBtn');
-    if (lastPaymentMethod === 'CASH') {
-      btn.innerHTML = 'ĐẶT MÓN NGAY';
-    } else {
-      btn.innerHTML = 'ĐẶT MÓN & THANH TOÁN QR';
-    }
-  });
-});
 
 function placeOrder() {
   if (!cart.length || ordering) return;
@@ -507,7 +363,6 @@ function placeOrder() {
   const note = document.getElementById('noteInput').value;
   const custName = document.getElementById('custName').value.trim();
   const custPhone = document.getElementById('custPhone').value.trim();
-  const paymentMethod = lastPaymentMethod;
 
   // Generate idempotency key to prevent duplicate orders on refresh
   const idempotencyKey = 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -521,37 +376,17 @@ function placeOrder() {
       notes: note,
       customer_name: custName,
       customer_phone: custPhone,
-      idempotency_key: idempotencyKey,
-      payment_method: paymentMethod,
     })
   })
   .then(r => r.json())
   .then(data => {
     ordering = false;
     btn.disabled = false;
-    btn.innerHTML = paymentMethod === 'CASH' ? 'ĐẶT MÓN NGAY' : 'ĐẶT MÓN & THANH TOÁN QR';
+    btn.innerHTML = 'ĐẶT MÓN NGAY';
     if (data.success) {
       lastOrderId = data.order_code || data.order_id;
       lastOrderDbId = data._id;
-      lastPaymentMethod = data.payment_method || paymentMethod;
       document.getElementById('successOID').textContent = lastOrderId;
-      document.getElementById('successTotal').textContent = 'Tổng: ' + fmt(data.total);
-
-      // Show payment info based on method
-      const paymentInfo = document.getElementById('successPaymentInfo');
-      const viewInvoiceBtn = document.getElementById('viewInvoiceBtn');
-      if (lastPaymentMethod === 'CASH') {
-        paymentInfo.className = 'cash-note show';
-        paymentInfo.innerHTML = '<strong>Vui lòng thanh toán tiền mặt khi nhận hàng!</strong>Đơn hàng của bạn đã được xác nhận. Cảm ơn quý khách!';
-        viewInvoiceBtn.style.display = 'block';
-        viewInvoiceBtn.textContent = 'Xem hóa đơn';
-      } else {
-        paymentInfo.className = 'cash-note';
-        paymentInfo.innerHTML = '';
-        viewInvoiceBtn.style.display = 'block';
-        viewInvoiceBtn.textContent = 'Xem hóa đơn & Thanh toán QR';
-      }
-
       document.getElementById('successScreen').classList.add('show');
       cart = [];
       updateCartUI();
@@ -567,11 +402,7 @@ function placeOrder() {
   closeCart();
 }
 
-function viewInvoice() {
-  if (lastOrderDbId) {
-    window.location.href = '/invoice?id=' + lastOrderDbId;
-  }
-}
+
 
 function backToMenu() { document.getElementById('successScreen').classList.remove('show'); }
 function fmt(n) { return (n || 0).toLocaleString('vi') + 'đ'; }
