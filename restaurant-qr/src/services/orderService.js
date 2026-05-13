@@ -12,9 +12,13 @@ class OrderService {
    * Create a new order with server-side price validation
    * FIX: Prices are looked up from the DB, not trusted from client
    */
-  async createOrder({ table_id, items, notes, customer_name, customer_phone, customer_address, idempotency_key }) {
+  async createOrder({ table_id, items, notes, customer_name, customer_phone, customer_address, idempotency_key, payment_method }) {
     const db = getDB();
     if (!db) throw new Error('Database not available');
+
+    // Validate payment method
+    const validPaymentMethods = ['CASH', 'BANK_TRANSFER'];
+    const orderPaymentMethod = validPaymentMethods.includes(payment_method) ? payment_method : 'CASH';
 
     // Idempotency check: prevent duplicate orders on refresh
     if (idempotency_key) {
@@ -102,8 +106,8 @@ class OrderService {
       total_price: totalPrice,
       // Backward compat
       total: totalPrice,
-      payment_method: 'bank_transfer',
-      payment_status: 'unpaid',
+      payment_method: orderPaymentMethod,
+      payment_status: orderPaymentMethod === 'CASH' ? 'paid' : 'unpaid',
       order_status: 'pending',
       idempotency_key: idempotency_key || null,
       created_at: new Date(),
@@ -269,13 +273,15 @@ class OrderService {
 
     const orderCode = order.order_code || order.short_id;
     const totalPrice = order.total_price || order.total;
+    const paymentMethod = order.payment_method || 'CASH';
 
     return {
       ...order,
       shop: config.SHOP,
       bank: config.BANK,
-      qr_url: buildVietQRUrl(totalPrice, orderCode),
+      qr_url: paymentMethod === 'BANK_TRANSFER' ? buildVietQRUrl(totalPrice, orderCode) : null,
       transfer_content: `THANH TOAN ${orderCode}`,
+      payment_method_display: paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản',
     };
   }
 

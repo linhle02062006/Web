@@ -146,9 +146,31 @@ function renderDash() {
 }
 
 // ===== ORDERS =====
-function renderOrders() {
+// renderOrders is defined below (after filter functions) to support payment method filtering
+
+function fOrd(f, btn) {
+  orderFilter = f;
+  document.querySelectorAll('#p-orders .ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+// Payment method filter state
+let paymentMethodFilter = 'all';
+
+function fOrdPm(pm, btn) {
+  paymentMethodFilter = pm;
+  document.querySelectorAll('.pm-ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+// ===== ORDERS =====
+renderOrders = function() {
   let list = orders;
-  if (orderFilter !== 'all') list = orders.filter(o => o.payment_status === orderFilter);
+  if (orderFilter !== 'all') list = list.filter(o => o.payment_status === orderFilter);
+  if (paymentMethodFilter !== 'all') list = list.filter(o => (o.payment_method || 'CASH') === paymentMethodFilter);
+
   const body = document.getElementById('ordBody');
   if (!list.length) { body.innerHTML = '<tr><td colspan="6" class="empty">Không có đơn</td></tr>'; return; }
   body.innerHTML = list.map(o => {
@@ -159,33 +181,35 @@ function renderOrders() {
     const isCompleted = isPaid;
     const oCode = o.order_code || o.short_id || o._id?.slice(-6) || '---';
     const total = o.total_price || o.total || 0;
+    const paymentMethod = o.payment_method || 'CASH';
+    const paymentMethodLabel = paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản';
+    const paymentMethodClass = paymentMethod === 'CASH' ? 'pm-cash' : 'pm-bank';
     const custInfo = o.customer_name ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(o.customer_name)}${o.customer_phone ? ' · ' + esc(o.customer_phone) : ''}</div>` : '';
     const noteHtml = o.notes ? `<div class="order-note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> ${esc(o.notes)}</div>` : '';
+
+    // Payment method badge
+    const pmBadge = `<span class="pm-badge ${paymentMethodClass}">${paymentMethodLabel}</span>`;
+
     return `<tr class="${isCancelled ? 'cancelled-row' : ''}">
-    <td><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(oCode)}</strong>${custInfo}<div class="ord-time">${fmtTime(o.created_at)}</div></td>
+    <td data-label="Mã đơn"><strong style="color:var(--accent);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}">#${esc(oCode)}</strong>${pmBadge}${custInfo}<div class="ord-time">${fmtTime(o.created_at)}</div></td>
     <td class="hide-sm" style="font-size:12px;max-width:220px;${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
     <td class="mobile-items" style="display:none;font-size:12px;color:var(--text);${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><div>${itemsText}</div>${noteHtml}</td>
-    <td style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong class="ord-total">${fm(total)}</strong></td>
-    <td>${badge(o.payment_status)}
+    <td data-label="Tổng tiền" style="${isCancelled ? 'text-decoration:line-through;color:var(--red)' : ''}"><strong class="ord-total">${fm(total)}</strong></td>
+    <td data-label="Trạng thái">${badge(o.payment_status)}
       ${isCancelled && o.cancellation_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-style:italic">Lý do: ${esc(o.cancellation_reason)}</div>` : ''}
     </td>
-    <td style="white-space:nowrap">
-      <button class="btn-sm btn-print" onclick="printBill('${o._id}')" title="Hóa đơn A4">In Bill</button>
-      <button class="btn-sm" style="background:#f0f0ff;color:#4f46e5" onclick="printThermal('${o._id}')" title="Bill nhiệt 80mm">80mm</button>
-      ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
-      ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(oCode)}')">Hủy</button>` : ''}
-      ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
+    <td>
+      <div class="action-buttons">
+        <button class="btn-sm btn-print" onclick="printBill('${o._id}')" title="Hóa đơn A4">In Bill</button>
+        <button class="btn-sm" style="background:#f0f0ff;color:#4f46e5" onclick="printThermal('${o._id}')" title="Bill nhiệt 80mm">80mm</button>
+        ${(!isPaid && !isCancelled) ? `<button class="btn-sm btn-pay" onclick="checkout('${o._id}')">Thanh toán</button> ` : ''}
+        ${(!isCompleted && !isCancelled) ? `<button class="btn-sm btn-del" onclick="showCancelModal('${o._id}', '${esc(oCode)}')">Hủy</button>` : ''}
+        ${(role !== 'staff' && isCancelled) ? `<button class="btn-sm btn-del" onclick="delOrder('${o._id}')">Xóa</button>` : ''}
+      </div>
     </td>
   </tr>`;
   }).join('');
-}
-
-function fOrd(f, btn) {
-  orderFilter = f;
-  document.querySelectorAll('#p-orders .ftab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderOrders();
-}
+};
 
 async function checkout(id) {
   if (!confirm('Xác nhận thanh toán?')) return;
@@ -618,51 +642,107 @@ function printBill(id) {
   window.open('/invoice?id=' + id, '_blank');
 }
 
-// Quick thermal receipt (80mm) for kitchen use
+// Quick thermal receipt (58mm/80mm) for kitchen use
 function printThermal(id) {
   const o = orders.find(x => x._id === id);
   if (!o) { alert('Không tìm thấy đơn'); return; }
+
   const orderCode = o.order_code || o.short_id || o._id.slice(-6);
+  const paymentMethod = o.payment_method || 'CASH';
+  const isCash = paymentMethod === 'CASH';
+  const isBankTransfer = paymentMethod === 'BANK_TRANSFER';
+
   const ps = o.payment_status === 'paid' ? 'Đã TT' : o.payment_status === 'cancelled' ? 'Đã hủy' : 'Chưa TT';
   const time = o.created_at ? new Date(o.created_at).toLocaleString('vi', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' }) : '';
   const total = o.total_price || o.total || 0;
-  const itemsHtml = (o.items||[]).map(i => `<tr><td style="text-align:left;padding:3px 0;font-size:13px">${esc(i.name)}</td><td style="text-align:center;padding:3px 4px;font-size:13px">${i.quantity}</td><td style="text-align:right;padding:3px 0;font-size:13px">${fm(i.subtotal || i.price * i.quantity)}</td></tr>`).join('');
-  const noteHtml = o.notes ? `<div style="margin-top:8px;padding:6px 8px;background:#f5f5f5;border-radius:4px;font-size:12px;word-break:break-word"><strong>Ghi chú:</strong> ${esc(o.notes)}</div>` : '';
-  
-  // Build VietQR URL
-  const qrUrl = `https://img.vietqr.io/image/970415-102870682710-compact.png?amount=${total}&addInfo=${encodeURIComponent('THANH TOAN ' + orderCode)}`;
-  const showQR = o.payment_status !== 'paid' && o.payment_status !== 'cancelled';
-  
-  const qrSection = showQR ? `
-    <div class="line"></div>
-    <div class="center"><strong style="font-size:12px">THANH TOÁN CHUYỂN KHOẢN</strong></div>
-    <div class="center" style="margin:8px 0"><img src="${qrUrl}" style="width:160px;height:160px;border:2px solid #000;border-radius:8px" onerror="this.style.display='none'"/></div>
-    <div style="font-size:11px;text-align:center">
-      <div>VietinBank: 102870682710</div>
-      <div>Chủ TK: BANH MI KIM PHAT</div>
-      <div style="margin-top:4px;font-weight:bold">ND: THANH TOAN ${orderCode}</div>
-    </div>
-  ` : '';
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill #${esc(orderCode)}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;width:80mm;max-width:80mm;padding:8px;font-size:13px;color:#000}
-.center{text-align:center}.line{border-top:1px dashed #000;margin:8px 0}
-table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;border-bottom:1px solid #000;padding:4px 0}
-@media print{@page{size:80mm auto;margin:0}body{width:80mm}}</style></head>
-<body><div class="center"><strong style="font-size:16px">BÁNH MÌ KIM PHÁT</strong><br><span style="font-size:11px">Hotline: 0123.456.789</span></div>
-<div class="line"></div>
-<div style="font-size:12px"><div><strong>Mã đơn:</strong> #${esc(orderCode)}</div><div><strong>Thời gian:</strong> ${time}</div>${o.customer_name ? `<div><strong>Khách:</strong> ${esc(o.customer_name)}</div>` : ''}${o.customer_phone ? `<div><strong>SĐT:</strong> ${esc(o.customer_phone)}</div>` : ''}<div><strong>Trạng thái:</strong> ${ps}</div></div>
-<div class="line"></div>
-<table><thead><tr><th style="text-align:left">Món</th><th style="text-align:center">SL</th><th style="text-align:right">Tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table>
-<div class="line"></div>
-<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold"><span>TỔNG CỘNG</span><span>${fm(total)}</span></div>
+  // Build items HTML with word-wrap for long names
+  const itemsHtml = (o.items||[]).map(i => `<tr>
+    <td style="text-align:left;padding:3px 0;font-size:12px;max-width:120px;word-break:break-word;vertical-align:top">${esc(i.name)}</td>
+    <td style="text-align:center;padding:3px 4px;font-size:12px;white-space:nowrap">${i.quantity}</td>
+    <td style="text-align:right;padding:3px 0;font-size:12px;white-space:nowrap">${fm(i.subtotal || i.price * i.quantity)}</td>
+  </tr>`).join('');
+
+  const noteHtml = o.notes ? `<div style="margin-top:8px;padding:6px 8px;background:#f5f5f5;border-radius:4px;font-size:11px;word-break:break-word"><strong>Ghi chú:</strong> ${esc(o.notes)}</div>` : '';
+
+  // Payment method badge
+  const payMethodBadge = isCash ? '<span style="background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">TIEN MAT</span>' : '<span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">CK NH</span>';
+
+  // Build QR section for BANK TRANSFER only, unpaid orders
+  let qrSection = '';
+  if (isBankTransfer && o.payment_status !== 'paid' && o.payment_status !== 'cancelled') {
+    const qrUrl = `https://img.vietqr.io/image/970415-102870682710-compact.png?amount=${total}&addInfo=${encodeURIComponent('THANH TOAN ' + orderCode)}`;
+    qrSection = `
+    <div style="border-top:1px dashed #000;margin:8px 0"></div>
+    <div style="text-align:center"><strong style="font-size:11px">THANH TOAN CHUYEN KHOAN</strong></div>
+    <div style="text-align:center;margin:6px 0"><img src="${qrUrl}" style="width:140px;height:140px;border:2px solid #000;border-radius:6px" onerror="this.style.display='none'"/></div>
+    <div style="font-size:10px;text-align:center">
+      <div>VietinBank: 102870682710</div>
+      <div>Chu TK: BANH MI KIM PHAT</div>
+      <div style="margin-top:4px;font-weight:bold">ND: THANH TOAN ${orderCode}</div>
+    </div>`;
+  }
+
+  // Cash payment note - no QR
+  let cashNote = '';
+  if (isCash && o.payment_status !== 'paid' && o.payment_status !== 'cancelled') {
+    cashNote = `
+    <div style="text-align:center;margin-top:8px;padding:8px;background:#dcfce7;border-radius:6px">
+      <div style="font-size:11px;color:#166534"><strong>VU long tra tien mat khi nhan hang</strong></div>
+      <div style="font-size:14px;font-weight:800;color:#16a34a;margin-top:4px">${fm(total)}</div>
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bill #${esc(orderCode)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;width:80mm;max-width:80mm;padding:6px;font-size:12px;color:#000;background:#fff}
+.center{text-align:center}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;text-transform:uppercase;border-bottom:1px solid #000;padding:4px 0}
+.dashed{border-top:1px dashed #000;margin:6px 0}
+.footer{text-align:center;font-size:10px;color:#666;margin-top:4px}
+@media print{@page{size:80mm auto;margin:0}}
+</style>
+</head>
+<body>
+<div class="center">
+  <strong style="font-size:15px">BANH MI KIM PHAT</strong><br>
+  <span style="font-size:10px">Hotline: 0123.456.789</span>
+</div>
+<div class="dashed"></div>
+<div style="font-size:11px">
+  <div><strong>Ma don:</strong> #${esc(orderCode)} ${payMethodBadge}</div>
+  <div><strong>TG:</strong> ${time}</div>
+  ${o.customer_name ? `<div><strong>KH:</strong> ${esc(o.customer_name)}</div>` : ''}
+  ${o.customer_phone ? `<div><strong>SDT:</strong> ${esc(o.customer_phone)}</div>` : ''}
+  <div><strong>TT:</strong> ${ps}</div>
+</div>
+<div class="dashed"></div>
+<table>
+  <thead><tr><th style="text-align:left">Mon</th><th style="text-align:center">SL</th><th style="text-align:right">Tien</th></tr></thead>
+  <tbody>${itemsHtml}</tbody>
+</table>
+<div class="dashed"></div>
+<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold">
+  <span>TONG</span><span>${fm(total)}</span>
+</div>
 ${noteHtml}
+${cashNote}
 ${qrSection}
-<div class="line"></div>
-<div class="center" style="font-size:11px;color:#666;margin-top:4px">Cảm ơn quý khách!<br>Hẹn gặp lại!</div>
-<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script></body></html>`;
-  const w = window.open('', '_blank', 'width=350,height=700');
+<div class="dashed"></div>
+<div class="footer">Cam on quy khach!<br>Hen gap lai!</div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=340,height=700');
   if (w) { w.document.write(html); w.document.close(); }
-  else { alert('Vui lòng cho phép popup để in bill'); }
+  else { alert('Vui long cho phep popup de in bill'); }
 }
 

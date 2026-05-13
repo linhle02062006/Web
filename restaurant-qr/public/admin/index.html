@@ -104,8 +104,15 @@
 <button class="ftab" onclick="fOrd('unpaid',this)">Chưa TT</button>
 <button class="ftab" onclick="fOrd('paid',this)">Đã TT</button>
 <button class="ftab" onclick="fOrd('cancelled',this)">Đã hủy</button>
-</div></div>
-<div class="tw"><div class="ts"><table><thead><tr><th>Mã đơn</th><th class="hide-sm">Các món & Ghi chú</th><th class="mobile-col">Món & Ghi chú</th><th>Tổng</th><th>Thanh toán</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
+</div>
+<div class="pm-filter">
+  <label class="pm-filter-label">Hình thức:</label>
+  <button class="ftab pm-ftab active" data-pm="all" onclick="fOrdPm('all',this)">Tất cả</button>
+  <button class="ftab pm-ftab" data-pm="CASH" onclick="fOrdPm('CASH',this)">Tiền mặt</button>
+  <button class="ftab pm-ftab" data-pm="BANK_TRANSFER" onclick="fOrdPm('BANK_TRANSFER',this)">Chuyển khoản</button>
+</div>
+</div>
+<div class="tw"><div class="ts"><table><thead><tr><th data-label="Mã đơn">Mã đơn</th><th class="hide-sm">Các món & Ghi chú</th><th class="mobile-col">Món & Ghi chú</th><th data-label="Tổng tiền">Tổng</th><th data-label="Trạng thái">Thanh toán</th><th>Thao tác</th></tr></thead><tbody id="ordBody"></tbody></table></div></div>
 </div>
 
 <!-- MENU -->

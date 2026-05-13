@@ -5,25 +5,35 @@ const config = require('../config');
 const { getDB } = require('../database/connection');
 
 /**
- * Generate a unique order code like DH20260513001
+ * Generate a short readable order code like HD260513 (format: PREFIX + YYMM + DD + SEQ)
+ * Examples: HD260513, HD260514, HD26052001
  */
 async function generateOrderCode() {
   const db = getDB();
   try {
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    
+    const year = today.getFullYear().toString().slice(-2);
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateKey = `${year}${month}${day}`;
+
     const result = await db.collection('counters').findOneAndUpdate(
-      { _id: `order_${dateStr}` },
+      { _id: `order_${dateKey}` },
       { $inc: { seq: 1 } },
       { upsert: true, returnDocument: 'after' }
     );
     const num = result.seq || result.value?.seq || 1;
-    return `${config.ORDER.codePrefix}${dateStr}${String(num).padStart(3, '0')}`;
+
+    // Format: PREFIX + YYMMDD + 2-digit sequence
+    // Example: HD260513, HD260514, HD26052001
+    if (num < 100) {
+      return `${config.ORDER.codePrefix}${dateKey}${String(num).padStart(2, '0')}`;
+    }
+    return `${config.ORDER.codePrefix}${dateKey}${String(num).padStart(4, '0')}`;
   } catch (err) {
     // Fallback: timestamp-based code
     const ts = Date.now().toString(36).toUpperCase();
-    return `${config.ORDER.codePrefix}${ts}`;
+    return `${config.ORDER.codePrefix}${ts.slice(-6)}`;
   }
 }
 

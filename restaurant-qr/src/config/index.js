@@ -29,7 +29,7 @@ module.exports = {
 
   // Order config
   ORDER: {
-    codePrefix: 'DH',
+    codePrefix: 'HD',
     defaultShippingFee: 0,
     defaultDiscount: 0,
     dataRetentionDays: 40,

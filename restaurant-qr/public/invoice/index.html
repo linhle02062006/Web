@@ -106,6 +106,7 @@ body {
 }
 .inv-status.unpaid { background: #fff7ed; }
 .inv-status.cancelled { background: #fef2f2; }
+.inv-status.cash-paid { background: #dcfce7; }
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -118,6 +119,7 @@ body {
 .status-badge.paid { background: #dcfce7; color: #16a34a; }
 .status-badge.unpaid { background: #ffedd5; color: #ea580c; }
 .status-badge.cancelled { background: #fce8e6; color: #c82014; }
+.status-badge.cash-paid { background: #dcfce7; color: #16a34a; }
 .status-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -180,7 +182,7 @@ body {
 .inv-items tbody td:first-child { font-weight: 600; text-align: left; }
 .inv-items tbody td:not(:first-child) { text-align: right; }
 .inv-items tbody tr:last-child td { border-bottom: none; }
-.item-name { font-weight: 600; }
+.item-name { font-weight: 600; word-break: break-word; }
 .item-price { color: var(--muted); }
 .item-qty { font-weight: 600; }
 .item-subtotal { font-weight: 700; color: var(--accent); }
@@ -227,7 +229,7 @@ body {
   color: var(--text);
 }
 
-/* ===================== QR PAYMENT SECTION ===================== */
+/* ===================== QR PAYMENT SECTION (BANK TRANSFER ONLY) ===================== */
 .inv-payment {
   padding: 28px 36px;
   border-top: 1px solid var(--border);
@@ -322,6 +324,47 @@ body {
   letter-spacing: 1px;
 }
 
+/* ===================== CASH PAYMENT CONFIRMATION ===================== */
+.inv-cash-confirm {
+  padding: 28px 36px;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  text-align: center;
+}
+.inv-cash-confirm .cash-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.inv-cash-confirm h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #166534;
+  margin-bottom: 8px;
+}
+.inv-cash-confirm p {
+  font-size: 14px;
+  color: #166534;
+  line-height: 1.6;
+}
+.inv-cash-amount {
+  display: inline-block;
+  background: #fff;
+  border: 2px solid #86efac;
+  border-radius: 12px;
+  padding: 12px 24px;
+  margin: 16px 0;
+}
+.inv-cash-amount .label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.inv-cash-amount .amount {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
 /* ===================== FOOTER ===================== */
 .inv-footer {
   padding: 20px 36px;
@@ -400,6 +443,7 @@ body {
   .inv-items { padding: 0 20px; }
   .inv-totals { padding: 0 20px 20px; }
   .inv-payment { padding: 24px 20px; }
+  .inv-cash-confirm { padding: 24px 20px; }
   .inv-qr-container { flex-direction: column; align-items: center; }
   .inv-qr-code { width: 180px; }
   .inv-qr-code img { width: 180px; height: 180px; }
@@ -409,7 +453,7 @@ body {
   .inv-btn { justify-content: center; }
 }
 
-/* ===================== PRINT STYLES ===================== */
+/* ===================== PRINT STYLES (A4) ===================== */
 @media print {
   @page {
     size: A4;
@@ -437,6 +481,10 @@ body {
     background: #faf8f4 !important;
     -webkit-print-color-adjust: exact !important;
   }
+  .inv-cash-confirm {
+    background: #dcfce7 !important;
+    -webkit-print-color-adjust: exact !important;
+  }
   .inv-qr-code img {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
@@ -454,14 +502,101 @@ body {
   }
 }
 
-/* ===================== THERMAL 80mm PRINT ===================== */
-@media print and (max-width: 80mm) {
-  @page { size: 80mm auto; margin: 2mm; }
-  body { width: 80mm; }
+/* ===================== THERMAL PRINTER STYLES (58mm / 80mm) ===================== */
+/* Thermal 58mm */
+@media print and (max-width: 58mm) {
+  @page { size: 58mm auto; margin: 2mm; }
+  body { font-size: 11px; width: 58mm; }
+  .invoice-wrap { width: 58mm; }
+  .inv-header { padding: 8px; }
+  .inv-logo { width: 32px; height: 32px; font-size: 14px; margin-bottom: 6px; }
+  .inv-shop-name { font-size: 13px; }
+  .inv-shop-tag, .inv-shop-contact { display: none; }
+  .inv-title-badge { font-size: 9px; padding: 3px 8px; margin-bottom: 4px; }
+  .inv-code { font-size: 12px; }
+  .inv-date { font-size: 9px; }
+  .inv-status { padding: 6px 8px; }
+  .status-badge { font-size: 10px; padding: 3px 10px; }
+  .inv-customer { padding: 10px 8px; grid-template-columns: 1fr; gap: 8px; }
+  .inv-field label { font-size: 8px; }
+  .inv-field span { font-size: 11px; }
+  .inv-items { padding: 0 8px; }
+  .inv-items-title { font-size: 9px; padding: 8px 0 6px; }
+  .inv-items thead th { font-size: 9px; padding: 6px 0; }
+  .inv-items tbody td { font-size: 10px; padding: 6px 0; }
+  .inv-totals { padding: 0 8px 10px; }
+  .inv-total-row { font-size: 10px; padding: 4px 0; }
+  .inv-total-row.grand { font-size: 13px; }
+  .inv-notes { padding: 8px; }
+  .inv-notes-label { font-size: 8px; }
+  .inv-notes-text { font-size: 9px; }
+  .inv-payment { padding: 10px 8px; }
+  .inv-payment-title { font-size: 11px; }
+  .inv-payment-sub { font-size: 9px; margin-bottom: 10px; }
+  .inv-qr-code { width: 100%; }
+  .inv-qr-code img { width: 100%; height: auto; max-width: 120px; }
+  .inv-bank-info { display: none; }
+  .inv-transfer-content { padding: 6px 8px; margin-top: 8px; }
+  .inv-transfer-content .label { font-size: 8px; }
+  .inv-transfer-content .content { font-size: 10px; }
+  .inv-cash-confirm { padding: 10px 8px; }
+  .inv-cash-confirm .cash-icon { font-size: 24px; margin-bottom: 6px; }
+  .inv-cash-confirm h3 { font-size: 12px; margin-bottom: 4px; }
+  .inv-cash-confirm p { font-size: 10px; }
+  .inv-cash-amount { padding: 8px 12px; margin: 10px 0; }
+  .inv-cash-amount .label { font-size: 9px; }
+  .inv-cash-amount .amount { font-size: 18px; }
+  .inv-footer { padding: 10px 8px; font-size: 9px; }
+}
+
+/* Thermal 80mm */
+@media print and (min-width: 59mm) and (max-width: 80mm) {
+  @page { size: 80mm auto; margin: 3mm; }
+  body { font-size: 12px; width: 80mm; }
+  .invoice-wrap { width: 80mm; }
   .inv-header { padding: 12px; }
+  .inv-logo { width: 40px; height: 40px; font-size: 16px; margin-bottom: 8px; }
   .inv-shop-name { font-size: 16px; }
+  .inv-shop-tag { font-size: 10px; }
+  .inv-shop-contact { display: none; }
+  .inv-title-badge { font-size: 10px; padding: 4px 10px; margin-bottom: 6px; }
+  .inv-code { font-size: 14px; }
+  .inv-date { font-size: 10px; }
+  .inv-status { padding: 8px 12px; }
+  .status-badge { font-size: 11px; padding: 4px 12px; }
+  .inv-customer { padding: 14px 12px; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .inv-field label { font-size: 9px; }
+  .inv-field span { font-size: 12px; }
+  .inv-items { padding: 0 12px; }
+  .inv-items-title { font-size: 10px; padding: 12px 0 8px; }
+  .inv-items thead th { font-size: 10px; padding: 8px 0; }
+  .inv-items tbody td { font-size: 11px; padding: 8px 0; }
+  .inv-totals { padding: 0 12px 14px; }
+  .inv-total-row { font-size: 11px; padding: 6px 0; }
+  .inv-total-row.grand { font-size: 15px; }
+  .inv-notes { padding: 10px 12px; }
+  .inv-notes-label { font-size: 9px; }
+  .inv-notes-text { font-size: 10px; }
+  .inv-payment { padding: 16px 12px; }
+  .inv-payment-title { font-size: 13px; }
+  .inv-payment-sub { font-size: 10px; margin-bottom: 14px; }
+  .inv-qr-code { width: 160px; }
   .inv-qr-code img { width: 140px; height: 140px; }
-  .inv-items tbody td { font-size: 12px; padding: 8px 0; }
+  .inv-bank-info { font-size: 11px; }
+  .inv-bank-label { min-width: 80px; font-size: 9px; }
+  .inv-bank-value { font-size: 11px; }
+  .inv-bank-value.highlight { font-size: 13px; }
+  .inv-transfer-content { padding: 10px 12px; margin-top: 12px; }
+  .inv-transfer-content .label { font-size: 9px; }
+  .inv-transfer-content .content { font-size: 13px; }
+  .inv-cash-confirm { padding: 16px 12px; }
+  .inv-cash-confirm .cash-icon { font-size: 32px; margin-bottom: 8px; }
+  .inv-cash-confirm h3 { font-size: 14px; margin-bottom: 6px; }
+  .inv-cash-confirm p { font-size: 11px; }
+  .inv-cash-amount { padding: 10px 16px; margin: 12px 0; }
+  .inv-cash-amount .label { font-size: 10px; }
+  .inv-cash-amount .amount { font-size: 22px; }
+  .inv-footer { padding: 14px 12px; font-size: 10px; }
 }
 </style>
 </head>
@@ -518,6 +653,9 @@ function renderInvoice(inv) {
   const discount = inv.discount || 0;
   const qrUrl = inv.qr_url || '';
   const transferContent = inv.transfer_content || `THANH TOAN ${orderCode}`;
+  const paymentMethod = inv.payment_method || 'CASH';
+  const paymentMethodDisplay = inv.payment_method_display || (paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản');
+  const staffName = inv.staff_name || inv.processed_by || '';
 
   const createdAt = inv.created_at
     ? new Date(inv.created_at).toLocaleString('vi-VN', {
@@ -531,7 +669,10 @@ function renderInvoice(inv) {
   // Payment status
   let statusClass = 'unpaid';
   let statusText = 'Chưa thanh toán';
-  if (inv.payment_status === 'paid') { statusClass = 'paid'; statusText = 'Đã thanh toán'; }
+  if (inv.payment_status === 'paid' || paymentMethod === 'CASH') {
+    statusClass = paymentMethod === 'CASH' ? 'cash-paid' : 'paid';
+    statusText = paymentMethod === 'CASH' ? 'Thanh toán tiền mặt' : 'Đã thanh toán';
+  }
   if (inv.payment_status === 'cancelled') { statusClass = 'cancelled'; statusText = 'Đã hủy'; }
 
   // Items rows
@@ -553,9 +694,45 @@ function renderInvoice(inv) {
       </div>`
     : '';
 
-  // QR section (only show if not yet paid)
-  const showQR = inv.payment_status !== 'paid' && inv.payment_status !== 'cancelled';
-  const qrHtml = showQR ? `
+  // Staff info
+  const staffHtml = staffName
+    ? `<div class="inv-field">
+        <label>Nhân viên</label>
+        <span>${esc(staffName)}</span>
+      </div>`
+    : '';
+
+  // Payment section - Conditional based on payment method
+  let paymentSection = '';
+
+  if (inv.payment_status === 'cancelled') {
+    paymentSection = `
+      <div class="inv-payment" style="background:#fef2f2;text-align:center;padding:20px 36px">
+        <div style="color:#c82014;font-weight:700;font-size:15px">Đơn hàng đã bị hủy</div>
+      </div>`;
+  } else if (paymentMethod === 'CASH') {
+    // CASH PAYMENT - No QR, show cash confirmation
+    paymentSection = `
+      <div class="inv-cash-confirm">
+        <div class="cash-icon">💵</div>
+        <h3>Thanh Toán Tiền Mặt</h3>
+        <p>Vui lòng thanh toán <strong>${fmt(totalPrice)}</strong><br/>khi nhận hàng</p>
+        <div class="inv-cash-amount">
+          <div class="label">Số tiền cần thanh toán</div>
+          <div class="amount">${fmt(totalPrice)}</div>
+        </div>
+        <p style="font-size:12px;color:#166534;margin-top:8px">Cảm ơn quý khách đã đặt hàng!</p>
+      </div>`;
+  } else if (inv.payment_status === 'paid') {
+    // BANK TRANSFER - Already paid
+    paymentSection = `
+      <div class="inv-payment" style="background:#f0fdf4;text-align:center;padding:20px 36px">
+        <div style="color:#16a34a;font-weight:700;font-size:15px">✓ Đơn hàng đã được thanh toán</div>
+        <div style="font-size:12px;color:#166534;margin-top:6px">Đã chuyển khoản thành công</div>
+      </div>`;
+  } else {
+    // BANK TRANSFER - Show QR code
+    paymentSection = `
     <div class="inv-payment">
       <div class="inv-payment-title">Thanh Toán Chuyển Khoản</div>
       <div class="inv-payment-sub">Quét mã QR hoặc chuyển khoản theo thông tin bên dưới</div>
@@ -587,12 +764,8 @@ function renderInvoice(inv) {
           </div>
         </div>
       </div>
-    </div>
-  ` : `
-    <div class="inv-payment" style="background:#f0fdf4;text-align:center;padding:20px 36px">
-      <div style="color:#16a34a;font-weight:700;font-size:15px">✓ Đơn hàng đã được thanh toán</div>
-    </div>
-  `;
+    </div>`;
+  }
 
   wrap.innerHTML = `
     <div class="invoice">
@@ -640,6 +813,11 @@ function renderInvoice(inv) {
           <label>Hình thức</label>
           <span>${inv.table_id === 'takeaway' ? 'Mang đi' : 'Bàn ' + esc(inv.table_id || '')}</span>
         </div>
+        <div class="inv-field">
+          <label>Thanh toán</label>
+          <span>${paymentMethodDisplay}</span>
+        </div>
+        ${staffHtml}
       </div>
 
       <!-- Items -->
@@ -683,8 +861,8 @@ function renderInvoice(inv) {
       <!-- Notes -->
       ${notesHtml}
 
-      <!-- QR Payment -->
-      ${qrHtml}
+      <!-- Payment Section (Conditional) -->
+      ${paymentSection}
 
       <!-- Footer -->
       <div class="inv-footer">

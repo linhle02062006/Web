@@ -11,12 +11,13 @@ const config = require('../config');
 // Create order (public - customer facing)
 router.post('/', validateOrderInput, async (req, res) => {
   try {
-    const { table_id, items, notes, customer_name, customer_phone, customer_address, idempotency_key } = req.body;
+    const { table_id, items, notes, customer_name, customer_phone, customer_address, idempotency_key, payment_method } = req.body;
     
     const result = await orderService.createOrder({
       table_id, items, notes,
       customer_name, customer_phone, customer_address,
       idempotency_key,
+      payment_method,
     });
 
     // Emit via socket
@@ -33,6 +34,7 @@ router.post('/', validateOrderInput, async (req, res) => {
       subtotal: result.subtotal,
       shipping_fee: result.shipping_fee,
       discount: result.discount,
+      payment_method: result.orderData?.payment_method || 'CASH',
       duplicate: result.duplicate || false,
     });
   } catch (err) {
